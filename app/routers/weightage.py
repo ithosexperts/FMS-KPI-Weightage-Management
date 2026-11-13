@@ -87,9 +87,9 @@ async def weightage_screen(request: Request):
     user = get_current_user_and_role(request)
     template_env = request.app.state.templates
     return template_env.TemplateResponse(
-        "weightage.html",
-        {
-            "request": request,
+        request=request,
+        name="weightage.html",
+        context={
             "user": user,
             "app_name": settings.app_name,
             "database": settings.api_database,

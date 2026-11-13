@@ -60,8 +60,9 @@ async def global_exception_handler(request: Request, exc: Exception):
             content={"status": "error", "message": f"Server Error: {str(exc)}"},
         )
     return templates.TemplateResponse(
-        "error.html",
-        {"request": request, "message": str(exc)},
+        request=request,
+        name="error.html",
+        context={"message": str(exc)},
         status_code=500,
     )
 
