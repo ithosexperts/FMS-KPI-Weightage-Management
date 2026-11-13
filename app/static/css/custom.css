@@ -93,3 +93,62 @@ body {
     background-color: #e2e3e5;
     color: #41464b;
 }
+
+/* ── Searchable Doer Dropdown Combobox ────────────────────────────────── */
+#doerComboboxWrapper {
+    position: relative;
+}
+
+#doerDropdownMenu {
+    top: 100%;
+    left: 0;
+    z-index: 1060;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16) !important;
+    border: 1px solid #ced4da !important;
+}
+
+.doer-option-item {
+    cursor: pointer;
+    transition: background-color 0.12s ease-in-out;
+    border-bottom: 1px solid #f1f3f5 !important;
+}
+
+.doer-option-item:last-child {
+    border-bottom: none !important;
+}
+
+.doer-option-item:hover,
+.doer-option-item.keyboard-focus {
+    background-color: #e7f1ff !important;
+}
+
+.doer-option-item.active {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+
+.doer-match-hl {
+    background-color: #fff3cd;
+    color: #664d03;
+    font-weight: 700;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+.doer-option-item.active .doer-match-hl {
+    background-color: rgba(255, 255, 255, 0.4);
+    color: #ffffff;
+}
+
+#doerOptionsList::-webkit-scrollbar {
+    width: 6px;
+}
+
+#doerOptionsList::-webkit-scrollbar-thumb {
+    background-color: #ced4da;
+    border-radius: 4px;
+}
+
+#doerOptionsList::-webkit-scrollbar-thumb:hover {
+    background-color: #adb5bd;
+}

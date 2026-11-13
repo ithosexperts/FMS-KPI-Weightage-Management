@@ -11,12 +11,24 @@ let currentWeightageRows = [];
 let newWeightageRows = []; // Array of { kpi: string, weight: number }
 let isDoerOnFmsConfig = false;
 let fmsStagesDetails = [];
+let currentFilteredDoers = [];
+let currentFocusedIndex = -1;
 
 // DOM Ready
 document.addEventListener("DOMContentLoaded", async () => {
     initDefaultDates();
+    setupDropdownClickOutside();
     await loadInitialData();
 });
+
+function setupDropdownClickOutside() {
+    document.addEventListener("click", (e) => {
+        const wrapper = document.getElementById("doerComboboxWrapper");
+        if (wrapper && !wrapper.contains(e.target)) {
+            closeDoerDropdown();
+        }
+    });
+}
 
 function initDefaultDates() {
     const todayStr = getTodayIso();
@@ -104,17 +116,225 @@ function populateDoerDropdown() {
     const selectEl = document.getElementById("doerSelect");
     if (!selectEl) return;
 
-    selectEl.innerHTML = '<option value="">-- Choose a Doer (Code - Name) --</option>';
+    // Strict alphabetical sort by EmployeeName (From Name Sort A to Z)
+    eligibleDoers.sort((a, b) => {
+        const nameA = (a.EmployeeName || "").trim().toLowerCase();
+        const nameB = (b.EmployeeName || "").trim().toLowerCase();
+        return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+    });
+
+    // Populate hidden/native select: Starting From Name, sorted A to Z
+    selectEl.innerHTML = '<option value="">-- Choose a Doer (Name - Code) --</option>';
     eligibleDoers.forEach(d => {
         const opt = document.createElement("option");
         opt.value = d.EmployeeCode;
-        opt.textContent = `${d.EmployeeCode} - ${d.EmployeeName} (${d.Department || "No Dept"})`;
+        opt.textContent = `${d.EmployeeName} - ${d.EmployeeCode} (${d.Department || "General"})`;
         selectEl.appendChild(opt);
+    });
+
+    // Initialize custom searchable combobox list
+    currentFilteredDoers = [...eligibleDoers];
+    renderDoerOptions(currentFilteredDoers, "");
+}
+
+function renderDoerOptions(list, query = "") {
+    const container = document.getElementById("doerOptionsList");
+    const countEl = document.getElementById("doerShowingCount");
+    if (countEl) countEl.textContent = list.length;
+    if (!container) return;
+
+    if (!list || list.length === 0) {
+        container.innerHTML = `
+            <div class="p-3 text-center text-muted small">
+                <i class="bi bi-person-x fs-4 d-block mb-1 text-secondary"></i>
+                No eligible doers matching "<strong>${escapeHtml(query)}</strong>"
+            </div>`;
+        return;
+    }
+
+    let html = "";
+    list.forEach((d, idx) => {
+        const isSelected = selectedDoer && selectedDoer.EmployeeCode === d.EmployeeCode;
+        const hlName = highlightMatch(d.EmployeeName || "", query);
+        const hlCode = highlightMatch(d.EmployeeCode || "", query);
+        const dept = d.Department || "General";
+
+        html += `
+        <a href="javascript:void(0)" 
+           class="list-group-item list-group-item-action py-2 px-3 doer-option-item ${isSelected ? 'active' : ''}" 
+           data-code="${d.EmployeeCode}" 
+           data-index="${idx}"
+           onclick="chooseDoer('${d.EmployeeCode}')">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="fw-bold ${isSelected ? 'text-white' : 'text-dark'}">${hlName}</span>
+                    <span class="badge ${isSelected ? 'bg-light text-dark' : 'bg-light text-secondary border'} font-monospace ms-2" style="font-size: 0.74rem;">${hlCode}</span>
+                </div>
+                <span class="badge ${isSelected ? 'bg-white text-primary' : 'bg-secondary-subtle text-secondary'} small" style="font-size: 0.72rem;">${escapeHtml(dept)}</span>
+            </div>
+        </a>`;
+    });
+    container.innerHTML = html;
+}
+
+function openDoerDropdown() {
+    const menu = document.getElementById("doerDropdownMenu");
+    if (!menu) return;
+    const searchInput = document.getElementById("doerSearchInput");
+    const query = searchInput ? searchInput.value.trim() : "";
+    
+    // If a doer is currently selected and input displays "Name - Code (Dept)", show all doers on click/focus
+    if (selectedDoer && searchInput && searchInput.value.includes(selectedDoer.EmployeeCode)) {
+        currentFilteredDoers = [...eligibleDoers];
+        renderDoerOptions(currentFilteredDoers, "");
+    } else if (query) {
+        onDoerSearchInput(query);
+    } else {
+        currentFilteredDoers = [...eligibleDoers];
+        renderDoerOptions(currentFilteredDoers, "");
+    }
+
+    menu.style.display = "block";
+    currentFocusedIndex = -1;
+}
+
+function closeDoerDropdown() {
+    const menu = document.getElementById("doerDropdownMenu");
+    if (menu) menu.style.display = "none";
+    currentFocusedIndex = -1;
+}
+
+function toggleDoerDropdown() {
+    const menu = document.getElementById("doerDropdownMenu");
+    if (!menu) return;
+    if (menu.style.display === "block") {
+        closeDoerDropdown();
+    } else {
+        const searchInput = document.getElementById("doerSearchInput");
+        if (searchInput) searchInput.focus();
+        openDoerDropdown();
+    }
+}
+
+function onDoerSearchInput(val) {
+    const q = (val || "").trim().toLowerCase();
+    if (!q) {
+        currentFilteredDoers = [...eligibleDoers];
+    } else {
+        currentFilteredDoers = eligibleDoers.filter(d => {
+            const name = (d.EmployeeName || "").toLowerCase();
+            const code = (d.EmployeeCode || "").toLowerCase();
+            const dept = (d.Department || "").toLowerCase();
+            return name.includes(q) || code.includes(q) || dept.includes(q);
+        });
+    }
+    renderDoerOptions(currentFilteredDoers, q);
+    const menu = document.getElementById("doerDropdownMenu");
+    if (menu) menu.style.display = "block";
+    currentFocusedIndex = -1;
+}
+
+function chooseDoer(empCode) {
+    const d = eligibleDoers.find(item => item.EmployeeCode === empCode);
+    if (!d) return;
+
+    const searchInput = document.getElementById("doerSearchInput");
+    if (searchInput) {
+        searchInput.value = `${d.EmployeeName} - ${d.EmployeeCode} (${d.Department || "General"})`;
+    }
+    const clearBtn = document.getElementById("doerClearBtn");
+    if (clearBtn) clearBtn.style.display = "inline-block";
+
+    const selectEl = document.getElementById("doerSelect");
+    if (selectEl) selectEl.value = empCode;
+
+    closeDoerDropdown();
+    onDoerSelected(empCode);
+}
+
+function clearDoerSelection() {
+    const searchInput = document.getElementById("doerSearchInput");
+    if (searchInput) {
+        searchInput.value = "";
+        searchInput.focus();
+    }
+    const clearBtn = document.getElementById("doerClearBtn");
+    if (clearBtn) clearBtn.style.display = "none";
+
+    const selectEl = document.getElementById("doerSelect");
+    if (selectEl) selectEl.value = "";
+
+    currentFilteredDoers = [...eligibleDoers];
+    renderDoerOptions(currentFilteredDoers, "");
+    closeDoerDropdown();
+    onDoerSelected("");
+}
+
+function onDoerSearchKeydown(e) {
+    const menu = document.getElementById("doerDropdownMenu");
+    const isMenuOpen = menu && menu.style.display === "block";
+
+    if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (!isMenuOpen) {
+            openDoerDropdown();
+            return;
+        }
+        const items = document.querySelectorAll(".doer-option-item");
+        if (items.length === 0) return;
+        currentFocusedIndex = (currentFocusedIndex + 1) % items.length;
+        updateKeyboardFocus(items);
+    } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (!isMenuOpen) {
+            openDoerDropdown();
+            return;
+        }
+        const items = document.querySelectorAll(".doer-option-item");
+        if (items.length === 0) return;
+        currentFocusedIndex = (currentFocusedIndex - 1 + items.length) % items.length;
+        updateKeyboardFocus(items);
+    } else if (e.key === "Enter") {
+        if (isMenuOpen && currentFocusedIndex >= 0 && currentFilteredDoers[currentFocusedIndex]) {
+            e.preventDefault();
+            chooseDoer(currentFilteredDoers[currentFocusedIndex].EmployeeCode);
+        }
+    } else if (e.key === "Escape") {
+        closeDoerDropdown();
+    }
+}
+
+function updateKeyboardFocus(items) {
+    items.forEach((el, idx) => {
+        if (idx === currentFocusedIndex) {
+            el.classList.add("keyboard-focus");
+            el.scrollIntoView({ block: "nearest" });
+        } else {
+            el.classList.remove("keyboard-focus");
+        }
     });
 }
 
+function highlightMatch(text, query) {
+    if (!text) return "";
+    if (!query || query.trim() === "") return escapeHtml(text);
+    const escapedQ = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`(${escapedQ})`, "gi");
+    return escapeHtml(text).replace(regex, '<span class="doer-match-hl">$1</span>');
+}
+
+function escapeHtml(str) {
+    if (!str) return "";
+    return str.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function reloadDoersList() {
-    selectedDoer = null;
+    clearDoerSelection();
     document.getElementById("doerMetaCardContainer").style.display = "none";
     document.getElementById("mainTabsContainer").style.display = "none";
     loadEligibleDoers();
@@ -132,6 +352,19 @@ async function onDoerSelected(empCode) {
 
     selectedDoer = eligibleDoers.find(d => d.EmployeeCode === empCode);
     if (!selectedDoer) return;
+
+    // Sync Search Input, Clear button & native select
+    const searchInput = document.getElementById("doerSearchInput");
+    if (searchInput) {
+        searchInput.value = `${selectedDoer.EmployeeName} - ${selectedDoer.EmployeeCode} (${selectedDoer.Department || "General"})`;
+    }
+    const clearBtn = document.getElementById("doerClearBtn");
+    if (clearBtn) clearBtn.style.display = "inline-block";
+
+    const selectEl = document.getElementById("doerSelect");
+    if (selectEl && selectEl.value !== empCode) {
+        selectEl.value = empCode;
+    }
 
     // Display Meta Card
     document.getElementById("metaEmpCode").textContent = selectedDoer.EmployeeCode;
@@ -740,13 +973,13 @@ async function loadFmsDoersInspector() {
             return;
         }
 
-        let html = `<div class="fw-bold small text-muted mb-2">${doers.length} Measured Doers with Live Weightage Today:</div><div class="list-group list-group-flush small">`;
+        let html = `<div class="fw-bold small text-muted mb-2"><i class="bi bi-sort-alpha-down text-primary me-1"></i>${doers.length} Measured Doers with Live Weightage Today (A to Z):</div><div class="list-group list-group-flush small">`;
         doers.forEach(d => {
             html += `
                 <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-1">
                     <div>
-                        <span class="badge bg-secondary font-monospace me-2">${d.EmployeeCode}</span>
-                        <span class="fw-semibold text-dark">${escapeHtml(d.EmployeeName)}</span>
+                        <span class="fw-semibold text-dark me-2">${escapeHtml(d.EmployeeName)}</span>
+                        <span class="badge bg-light text-secondary border font-monospace">${d.EmployeeCode}</span>
                     </div>
                     <span class="badge bg-success-subtle text-success border border-success"><i class="bi bi-check-circle me-1"></i>Measured</span>
                 </div>

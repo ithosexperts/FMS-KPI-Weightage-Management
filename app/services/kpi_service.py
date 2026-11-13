@@ -114,8 +114,8 @@ class KpiService:
                     "TermDate": format_date_iso(term_date),
                 }
 
-        # Sort alphabetically by EmployeeName
-        sorted_doers = sorted(eligible_map.values(), key=lambda x: x["EmployeeName"].lower())
+        # Sort strictly alphabetically by EmployeeName (From Name Sort A to Z)
+        sorted_doers = sorted(eligible_map.values(), key=lambda x: (x.get("EmployeeName") or "").strip().lower())
         return sorted_doers
 
     @staticmethod
@@ -379,7 +379,7 @@ class KpiService:
                         "EmployeeName": name,
                     }
 
-        result = sorted(measured_doers.values(), key=lambda x: x["EmployeeName"].lower())
+        result = sorted(measured_doers.values(), key=lambda x: (x.get("EmployeeName") or "").strip().lower())
         return result
 
     @classmethod

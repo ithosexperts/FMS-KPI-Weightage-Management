@@ -47,17 +47,87 @@
     </div>
     <div class="card-body">
         <div class="row align-items-center g-3">
-            <div class="col-md-6 col-lg-5">
-                <label for="doerSelect" class="form-label fw-semibold small text-muted text-uppercase mb-1">
-                    Employee Dropdown (Searchable by Code or Name)
-                </label>
-                <div class="input-group">
-                    <span class="input-group-text bg-light text-muted"><i class="bi bi-person-search"></i></span>
-                    <select id="doerSelect" class="form-select" onchange="onDoerSelected(this.value)">
-                        <option value="">-- Choose a Doer --</option>
-                    </select>
+            <div class="col-md-7 col-lg-6">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="doerSearchInput" class="form-label fw-semibold small text-muted text-uppercase mb-0">
+                        <i class="bi bi-person-badge text-primary me-1"></i> Searchable Employee Dropdown
+                    </label>
+                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle" style="font-size: 0.72rem;">
+                        <i class="bi bi-sort-alpha-down text-primary me-1"></i> Sorted: Name A &rarr; Z
+                    </span>
                 </div>
-                <div class="form-text small" id="doerListSummary">Loading eligible doers...</div>
+
+                <!-- Custom Searchable Combobox -->
+                <div class="position-relative" id="doerComboboxWrapper">
+                    <div class="input-group shadow-sm">
+                        <span class="input-group-text bg-white text-primary border-end-0">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input 
+                            type="text" 
+                            id="doerSearchInput" 
+                            class="form-control border-start-0 border-end-0 ps-1" 
+                            placeholder="Type to search employee by Name (A-Z) or Code..." 
+                            autocomplete="off"
+                            aria-label="Search employee by name or code"
+                            onfocus="openDoerDropdown()"
+                            oninput="onDoerSearchInput(this.value)"
+                            onkeydown="onDoerSearchKeydown(event)"
+                        >
+                        <button 
+                            type="button" 
+                            id="doerClearBtn" 
+                            class="btn border border-start-0 border-end-0 px-2 text-muted" 
+                            style="display: none; background: #ffffff;" 
+                            title="Clear selection"
+                            onclick="clearDoerSelection()"
+                        >
+                            <i class="bi bi-x-circle-fill text-secondary"></i>
+                        </button>
+                        <button 
+                            type="button" 
+                            id="doerDropdownToggleBtn" 
+                            class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" 
+                            onclick="toggleDoerDropdown()"
+                            title="Open or close doer list"
+                        >
+                            <span class="visually-hidden">Toggle Dropdown</span>
+                        </button>
+                    </div>
+
+                    <!-- Hidden native select for standard form and automated test compatibility -->
+                    <select id="doerSelect" class="d-none" onchange="onDoerSelected(this.value)">
+                        <option value="">-- Choose a Doer (Name - Code) --</option>
+                    </select>
+
+                    <!-- Searchable Dropdown Popup Menu -->
+                    <div 
+                        id="doerDropdownMenu" 
+                        class="card border shadow-lg position-absolute w-100 mt-1 rounded-3 overflow-hidden" 
+                        style="z-index: 1060; display: none;"
+                    >
+                        <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center border-bottom">
+                            <span class="small fw-semibold text-secondary" id="doerDropdownCountText">
+                                <i class="bi bi-people-fill text-primary me-1"></i> <span id="doerShowingCount">0</span> doers available
+                            </span>
+                            <span class="badge bg-primary text-white" style="font-size: 0.72rem;">
+                                From Name A to Z
+                            </span>
+                        </div>
+                        <div 
+                            id="doerOptionsList" 
+                            class="list-group list-group-flush" 
+                            style="max-height: 320px; overflow-y: auto;"
+                        >
+                            <!-- Dynamically loaded with Name first, Code badge, Department -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-text small d-flex justify-content-between align-items-center mt-1">
+                    <span id="doerListSummary">Loading eligible doers...</span>
+                    <span class="text-muted fst-italic" style="font-size: 0.72rem;">&uarr;&darr; keys to navigate &bull; Enter to select</span>
+                </div>
             </div>
 
             <!-- Selected Doer Meta Card -->
