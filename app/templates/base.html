@@ -28,13 +28,13 @@
             <div class="collapse navbar-collapse" id="navbarContent">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
-                        <a class="nav-link active" href="/"><i class="bi bi-sliders2 me-1"></i> Weightage Screen</a>
+                        <a class="nav-link {% if current_page == 'weightage' %}active fw-semibold{% endif %}" href="/"><i class="bi bi-sliders2 me-1"></i> Weightage Screen</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#fms-inspector" onclick="switchMainTab('fms-tab')"><i class="bi bi-people-fill me-1"></i> Measured Doers (FMS_Config)</a>
+                        <a class="nav-link" href="/#fms-inspector" onclick="if(window.switchMainTab){switchMainTab('fms-tab');}"><i class="bi bi-people-fill me-1"></i> Measured Doers (FMS_Config)</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/docs" target="_blank"><i class="bi bi-file-code me-1"></i> API Docs</a>
+                        <a class="nav-link {% if current_page == 'documentation' %}active fw-semibold text-warning{% endif %}" href="/documentation"><i class="bi bi-journal-text me-1"></i> System Documentation</a>
                     </li>
                 </ul>
 

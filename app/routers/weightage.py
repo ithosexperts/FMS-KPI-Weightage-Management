@@ -77,7 +77,7 @@ def enforce_approver_role(request: Request) -> Dict[str, Any]:
     return user
 
 
-# ── Web UI Route ─────────────────────────────────────────────────────────────
+# ── Web UI Routes ────────────────────────────────────────────────────────────
 
 @router.get("/", response_class=HTMLResponse)
 async def weightage_screen(request: Request):
@@ -95,6 +95,30 @@ async def weightage_screen(request: Request):
             "database": settings.api_database,
             "is_production": settings.is_production,
             "allowed_roles": settings.allowed_approver_role_ids,
+            "current_page": "weightage",
+        },
+    )
+
+
+@router.get("/documentation", response_class=HTMLResponse)
+@router.get("/docs", response_class=HTMLResponse)
+async def documentation_screen(request: Request):
+    """
+    Renders the complete 10-page official System Design Documentation
+    (SDC_FMS_KPIWeightage_SystemDesign v1.0).
+    """
+    user = get_current_user_and_role(request)
+    template_env = request.app.state.templates
+    return template_env.TemplateResponse(
+        request=request,
+        name="documentation.html",
+        context={
+            "user": user,
+            "app_name": settings.app_name,
+            "database": settings.api_database,
+            "is_production": settings.is_production,
+            "allowed_roles": settings.allowed_approver_role_ids,
+            "current_page": "documentation",
         },
     )
 

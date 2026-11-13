@@ -1,0 +1,685 @@
+{% extends "base.html" %}
+
+{% block title %}System Design Documentation - KPI Weightage &amp; FMS_Config{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar Table of Contents -->
+    <div class="col-lg-3 d-none d-lg-block">
+        <div class="sticky-top pt-2" style="top: 70px; z-index: 10;">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white py-2 small fw-bold text-uppercase">
+                    <i class="bi bi-list-nested me-1"></i> Document Sections
+                </div>
+                <div class="list-group list-group-flush small" style="font-size: 0.83rem;">
+                    <a href="#doc-header" class="list-group-item list-group-item-action py-2">Document Overview</a>
+                    <a href="#sec-1" class="list-group-item list-group-item-action py-2">1. What a weightage is</a>
+                    <a href="#sec-2" class="list-group-item list-group-item-action py-2">2. Versions &mdash; Lifecycle</a>
+                    <a href="#sec-3" class="list-group-item list-group-item-action py-2">3. The Tables (Z_KPI_Weightage &amp; Master)</a>
+                    <a href="#sec-4" class="list-group-item list-group-item-action py-2">4. The Rules (WR1 &ndash; WR16)</a>
+                    <a href="#sec-5" class="list-group-item list-group-item-action py-2">5. The Weightage Screen</a>
+                    <a href="#sec-6" class="list-group-item list-group-item-action py-2">6. Procedure Contracts &amp; Errors</a>
+                    <a href="#sec-7" class="list-group-item list-group-item-action py-2">7. FMS_Config &amp; Reallocation App</a>
+                    <a href="#sec-8" class="list-group-item list-group-item-action py-2">8. What the user will see in scoring</a>
+                    <a href="#sec-9" class="list-group-item list-group-item-action py-2">9. Test Checklist (T1 &ndash; T15)</a>
+                    <a href="#sec-10" class="list-group-item list-group-item-action py-2">10. What to Deliver</a>
+                </div>
+            </div>
+            <div class="mt-3 text-center">
+                <a href="/" class="btn btn-outline-primary btn-sm w-100 shadow-sm">
+                    <i class="bi bi-sliders2 me-1"></i> Open Weightage Screen
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Document Content -->
+    <div class="col-lg-9 col-12">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4 p-md-5">
+
+                <!-- Header Metadata -->
+                <div id="doc-header" class="border-bottom pb-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted font-monospace small">SDC_FMS_KPIWeightage_SystemDesignVersion 1.0</span>
+                        <span class="badge bg-secondary">11 November 2026 | Internal</span>
+                    </div>
+                    <h2 class="fw-bold text-dark mb-1">KPI Weightage</h2>
+                    <h5 class="text-secondary fw-normal mb-3">System Design &mdash; the weightage screen and the FMS_Config doer rule</h5>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm mb-3 small align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 25%;">Field</th>
+                                    <th>Detail</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="fw-bold">Version / Date</td>
+                                    <td>1.0 &bull; 11 November 2026</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Classification</td>
+                                    <td>Internal</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Audience</td>
+                                    <td>Systems Team &mdash; application developer</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Scope</td>
+                                    <td>The KPI weightage screen; the doer dropdowns on the FMS_Config screen and the doer reallocation app</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Database objects</td>
+                                    <td><code>Z_KPI_Weightage</code>, <code>Z_KPI_Master</code>, <code>SP_KPI_Weightage_Set</code>, <code>SP_KPI_Weightage_Inactive</code>, <code>sp_Add_FMS_Config</code> (amended)</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Status</td>
+                                    <td><span class="badge bg-success">Design agreed</span> Database side built; application side to be built from this document.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="alert alert-success border-success-subtle mb-0">
+                        <h6 class="alert-heading fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i> WHAT IS ALREADY BUILT, AND WHAT YOU BUILD</h6>
+                        <p class="small mb-2">
+                            <strong>Built in the database:</strong> the two tables, the two write procedures that enforce every rule in this document, and the guard in <code>sp_Add_FMS_Config</code>. You call them; you do not reproduce their logic in SQL of your own.
+                        </p>
+                        <p class="small mb-2">
+                            <strong>You build:</strong> the weightage screen, its read queries, the on-screen checks, the two procedure calls, and the change to the doer dropdowns on <code>FMS_Config</code> and on the doer reallocation app.
+                        </p>
+                        <div class="small fw-semibold text-dark">
+                            <strong>One write path:</strong> the application never runs INSERT, UPDATE or DELETE against <code>Z_KPI_Weightage</code> or <code>Z_KPI_Master</code>. Every change goes through a procedure.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 1 -->
+                <section id="sec-1" class="mb-5 pt-2">
+                    <h4 class="fw-bold text-dark border-bottom pb-2 mb-3">1. What a weightage is</h4>
+                    <p>
+                        Every doer is measured on one or more KPIs. Today there are two: <strong>KPI01, Delay Rate</strong>, and <strong>KPI02, Task Completion Rate</strong>. A doer's day score is the weighted sum of their KPI scores for that day, so the weightages decide how much each KPI counts.
+                    </p>
+
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered table-sm small align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Doer</th>
+                                    <th>KPI01 score</th>
+                                    <th>KPI02 score</th>
+                                    <th>Weightage</th>
+                                    <th>Day score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="fw-bold">Bhupal</td>
+                                    <td>80</td>
+                                    <td>100</td>
+                                    <td>KPI01 0.85, KPI02 0.15</td>
+                                    <td>80 &times; 0.85 + 100 &times; 0.15 = <strong>83.00</strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Chandan</td>
+                                    <td>80</td>
+                                    <td>&mdash;</td>
+                                    <td>KPI01 1.00 only</td>
+                                    <td>80 &times; 1.00 = <strong>80.00</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p class="small text-muted">
+                        Weightage is set per doer. Most doers carry KPI01 0.85 and KPI02 0.15, but that is a common choice, not a rule. A doer is scored only on the KPIs they are given a weightage for: Chandan above has no KPI02 rows at all.
+                    </p>
+
+                    <div class="alert alert-danger bg-danger-subtle border-danger-subtle py-2 px-3 small">
+                        <strong>WHY THIS SCREEN MATTERS:</strong> A doer with no weightage is not measured. Their tasks are still completed and timed, but none of it reaches their KPI score. That is why <code>FMS_Config</code> will not accept a doer without a weightage (Section 7).
+                    </div>
+                </section>
+
+                <!-- SECTION 2 -->
+                <section id="sec-2" class="mb-5 pt-2">
+                    <h4 class="fw-bold text-dark border-bottom pb-2 mb-3">2. Versions &mdash; how a weightage changes</h4>
+                    <p>
+                        A weightage row is never edited once posted. A change is made by closing the current set and adding a new one. Each set is a version with a start date and, once replaced, an end date.
+                    </p>
+
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered table-sm small align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 25%;">Field</th>
+                                    <th>Meaning</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="fw-bold">EffectiveFromDate</td>
+                                    <td>The first day the version applies. Chosen on the screen. Today or later &mdash; never in the past.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">EffectiveToDate</td>
+                                    <td>The last day it applies. Never entered on the screen. Filled automatically when the version is replaced or the doer is marked inactive: the new start date minus one day. Empty means still in effect.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Active = Y</td>
+                                    <td>A real version &mdash; current, past or waiting to start.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Active = N</td>
+                                    <td>Voided: replaced before it ever took effect. Ignored by scoring.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card bg-light border mb-3">
+                        <div class="card-header bg-transparent py-2 fw-bold small text-uppercase">
+                            <i class="bi bi-clock-history me-1"></i> WORKED EXAMPLE &mdash; BHUPAL (0017)
+                        </div>
+                        <div class="card-body small py-2">
+                            <ul class="mb-0 ps-3">
+                                <li class="mb-1"><strong>06-Oct-2026:</strong> Set at go-live: KPI01 0.85, KPI02 0.15, from 06-Oct.</li>
+                                <li class="mb-1"><strong>11-Nov:</strong> HR submits KPI01 0.70, KPI02 0.30 from 12-Nov. The 06-Oct rows get <code>EffectiveToDate 11-Nov</code> and stay <code>Active = Y</code>. Two new rows from 12-Nov.</li>
+                                <li class="mb-1"><strong>Result:</strong> Every day up to 11-Nov is scored at 0.85 / 0.15, including any day recalculated later. From 12-Nov, 0.70 / 0.30. No past score changes.</li>
+                                <li class="mb-1"><strong>20-Nov:</strong> HR submits KPI01 0.80, KPI02 0.20 from 01-Dec. The 12-Nov rows get <code>EffectiveToDate 30-Nov</code>. New rows from 01-Dec.</li>
+                                <li class="mb-1"><strong>22-Nov:</strong> HR changes its mind: KPI01 0.75, KPI02 0.25 from 25-Nov. The 01-Dec rows have not started, so they are voided (<code>Active = N</code>). The 12-Nov rows now end 24-Nov. New rows from 25-Nov. <em>The newest submission always wins.</em></li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 3 -->
+                <section id="sec-3" class="mb-5 pt-2">
+                    <h4 class="fw-bold text-dark border-bottom pb-2 mb-3">3. The tables</h4>
+                    
+                    <h5 class="fw-bold fs-6 text-primary mb-2">3.1 Z_KPI_Weightage</h5>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered table-sm small align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Column</th>
+                                    <th>Type</th>
+                                    <th>Written by</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>WeightageID</td>
+                                    <td>INT identity</td>
+                                    <td>Database</td>
+                                    <td>Primary key</td>
+                                </tr>
+                                <tr>
+                                    <td>DoerCode, DoerName</td>
+                                    <td>NVARCHAR</td>
+                                    <td>SP</td>
+                                    <td>Name taken from the employee master</td>
+                                </tr>
+                                <tr>
+                                    <td>KPICode, KPIName</td>
+                                    <td>NVARCHAR</td>
+                                    <td>SP</td>
+                                    <td>Name taken from Z_KPI_Master</td>
+                                </tr>
+                                <tr>
+                                    <td>Weightage</td>
+                                    <td>DECIMAL</td>
+                                    <td>SP</td>
+                                    <td>Above 0, at most 1</td>
+                                </tr>
+                                <tr>
+                                    <td>EffectiveFromDate</td>
+                                    <td>DATE</td>
+                                    <td>SP</td>
+                                    <td>From the screen</td>
+                                </tr>
+                                <tr>
+                                    <td>EffectiveToDate</td>
+                                    <td>DATE</td>
+                                    <td>SP</td>
+                                    <td>Never from the screen</td>
+                                </tr>
+                                <tr>
+                                    <td>Active</td>
+                                    <td>CHAR(1)</td>
+                                    <td>SP</td>
+                                    <td>Y, or N when voided</td>
+                                </tr>
+                                <tr>
+                                    <td>ChangeReason</td>
+                                    <td>NVARCHAR(250)</td>
+                                    <td>SP</td>
+                                    <td>From the screen; mandatory</td>
+                                </tr>
+                                <tr>
+                                    <td>InsertTS, InsertedBy</td>
+                                    <td>DATETIME, NVARCHAR(50)</td>
+                                    <td>SP</td>
+                                    <td>User from the app session</td>
+                                </tr>
+                                <tr>
+                                    <td>LastSyncTS, LastUpdatedBy</td>
+                                    <td>DATETIME, NVARCHAR(50)</td>
+                                    <td>SP</td>
+                                    <td>Set when a row is closed or voided</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="small text-muted mb-4">
+                        The table enforces: weight between 0 and 1; Active is Y or N; EffectiveToDate not before EffectiveFromDate; one live version per doer, KPI and start date.
+                    </p>
+
+                    <h5 class="fw-bold fs-6 text-primary mb-2">3.2 Z_KPI_Master</h5>
+                    <p class="small">
+                        The KPIs the system can score: <code>KPICode</code>, <code>KPIName</code>, <code>Active</code>. Two rows today. The screen reads it for the KPI dropdown. It has no screen: a KPI exists only when its scoring code is built, so a row is added by the developer as part of that build and never before.
+                    </p>
+                </section>
+
+                <!-- SECTION 4 -->
+                <section id="sec-4" class="mb-5 pt-2">
+                    <h4 class="fw-bold text-dark border-bottom pb-2 mb-3">4. The rules</h4>
+                    <p class="small text-muted">
+                        Each rule is enforced twice: by the screen, so the user gets instant feedback, and by the procedure, as the final guard. The screen must never rely on the procedure alone, and the procedure never trusts the screen.
+                    </p>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm small align-middle">
+                            <thead class="table-light">
+                                <tr style="width: 15%;">
+                                    <th>ID</th>
+                                    <th>Rule</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="fw-bold">WR1</td>
+                                    <td>The doer is selected first.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR2</td>
+                                    <td>The doer list holds employees who are Active = Y, whose TermDate is empty or today or later, and who are not in Management (department 20).</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR3</td>
+                                    <td>The doer’s current version, and any version waiting to start, are shown read-only.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR4</td>
+                                    <td>A posted row is never edited or deleted. A change is a new version.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR5</td>
+                                    <td>Each submission is the doer’s complete new set: only the KPIs allocated to them, each once.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR6</td>
+                                    <td>KPIs are chosen from Z_KPI_Master. No typing of codes.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR7</td>
+                                    <td>Each weight is above 0 and at most 1, with at most two decimals. A KPI that does not apply is left out, not entered as 0.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR8</td>
+                                    <td>The weights add up to exactly 1.00.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR9</td>
+                                    <td>Effective From is today or later, not before the doer’s StartDate, and not after their TermDate.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR10</td>
+                                    <td>EffectiveToDate is never entered. It is filled when a version is replaced: new start date minus one day.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR11</td>
+                                    <td>A version waiting to start on or after the new start date is voided. The newest submission wins.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR12</td>
+                                    <td>Closing the old version and inserting the new one happen together, or not at all.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR13</td>
+                                    <td>Two users cannot change the same doer at the same moment.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR14</td>
+                                    <td>Change reason is mandatory. The user is taken from the session, never typed.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR15</td>
+                                    <td>Mark Inactive closes the doer’s version; it is refused while the doer is on any active FMS_Config row.</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">WR16</td>
+                                    <td>Only the role that approves weightages can open the screen. Enforced by the application, not the database.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- SECTION 5 -->
+                <section id="sec-5" class="mb-5 pt-2">
+                    <h4 class="fw-bold text-dark border-bottom pb-2 mb-3">5. The weightage screen</h4>
+
+                    <h5 class="fw-bold fs-6 text-primary mb-2">5.1 Select the doer</h5>
+                    <p class="small">A single dropdown, searchable by code and name. Its list:</p>
+                    <pre class="bg-dark text-white p-2 rounded small font-monospace">SELECT DISTINCT EmployeeCode, EmployeeName
+FROM dbo.VM_EmployeeMaster
+WHERE Active = 'Y'
+AND (TermDate IS NULL OR TermDate >= CAST(GETDATE() AS DATE))
+AND ISNULL(DeptCode, 0) &lt;&gt; 20</pre>
+                    <p class="small text-muted">DISTINCT is needed: the employee master returns one row per role.</p>
+
+                    <h5 class="fw-bold fs-6 text-primary mb-2">5.2 Show the current weightage &mdash; read-only</h5>
+                    <p class="small">The version in effect and any version waiting to start, with every column of Section 3.1. Nothing on this grid can be edited.</p>
+                    <pre class="bg-dark text-white p-2 rounded small font-monospace">SELECT * FROM dbo.Z_KPI_Weightage
+WHERE DoerCode = @DoerCode AND Active = 'Y'
+AND (EffectiveToDate IS NULL OR EffectiveToDate >= CAST(GETDATE() AS DATE))
+ORDER BY EffectiveFromDate, KPICode;</pre>
+                    <p class="small text-muted">If the doer has no rows, show <em>"No weightage set &mdash; this doer is not measured"</em>.</p>
+
+                    <h5 class="fw-bold fs-6 text-primary mb-2">5.3 Enter the new set</h5>
+                    <ul class="small">
+                        <li>An "Add KPI" button adds a row: KPI dropdown + weight. Repeat until the set is complete.</li>
+                        <li>The KPI dropdown lists Z_KPI_Master rows with Active = Y, minus any KPI already on the screen.</li>
+                        <li>Pre-fill the rows from the current version, so the user changes only what differs. Each row can be removed.</li>
+                        <li>Show a running total under the weights, green at exactly 1.00, red otherwise.</li>
+                        <li>Effective From: a date picker, defaulting to today. Dates before today, before StartDate or after TermDate are disabled.</li>
+                        <li>Change Reason: mandatory text, up to 250 characters.</li>
+                        <li>Submit is enabled only when every check in Section 5.4 passes.</li>
+                    </ul>
+
+                    <h5 class="fw-bold fs-6 text-primary mb-2">5.4 On-screen checks</h5>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered table-sm small align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Check</th>
+                                    <th>Message to show</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>At least one KPI</td>
+                                    <td>Add at least one KPI.</td>
+                                </tr>
+                                <tr>
+                                    <td>No KPI twice</td>
+                                    <td>This KPI is already in the set.</td>
+                                </tr>
+                                <tr>
+                                    <td>Weight above 0, at most 1, two decimals</td>
+                                    <td>Enter a weight between 0.01 and 1.00.</td>
+                                </tr>
+                                <tr>
+                                    <td>Total exactly 1.00</td>
+                                    <td>Weights must add up to exactly 1.00. Current total: x.xx</td>
+                                </tr>
+                                <tr>
+                                    <td>Effective From in range</td>
+                                    <td>Choose a date from today, within the doer’s employment.</td>
+                                </tr>
+                                <tr>
+                                    <td>Reason entered</td>
+                                    <td>Enter the reason for this change.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h5 class="fw-bold fs-6 text-primary mb-2">5.5 Submit</h5>
+                    <p class="small">One call. The procedure validates again, then voids, closes and inserts in a single transaction.</p>
+                    <pre class="bg-dark text-white p-2 rounded small font-monospace">EXEC dbo.SP_KPI_Weightage_Set
+@DoerCode = N'0017',
+@EffectiveFromDate = '2026-11-12',
+@Weights = N'[{"KPI":"KPI01","W":0.70},{"KPI":"KPI02","W":0.30}]',
+@ChangeReason = N'Completion now weighted higher',
+@UserCode = N'&lt;logged-in user&gt;';</pre>
+                    <ul class="small">
+                        <li>@Weights is a JSON array, one object per KPI: "KPI" is the code, "W" the weight as a number with a dot decimal.</li>
+                        <li>On success the procedure returns the new rows. Refresh the grid in 5.2 from the database.</li>
+                        <li>On failure nothing has been written. Show the error message as it is &mdash; it states the problem (Section 6.3).</li>
+                    </ul>
+
+                    <h5 class="fw-bold fs-6 text-primary mb-2">5.6 Mark Inactive</h5>
+                    <p class="small">
+                        For a doer who stays employed but stops being a doer &mdash; moved to Management, or to a role with no FMS tasks. Leaving the company is handled by TermDate, not by this button.
+                    </p>
+                    <ul class="small">
+                        <li>A "Mark Inactive" button on the selected doer, asking for "Inactive from" (today or later) and a reason.</li>
+                        <li>Disable it, with the message <em>"Remove this doer from FMS_Config first"</em>, while the doer is on any active FMS_Config row as Doer, Backup Doer or Temp Doer.</li>
+                    </ul>
+                    <pre class="bg-dark text-white p-2 rounded small font-monospace">EXEC dbo.SP_KPI_Weightage_Inactive
+@DoerCode = N'0017', @InactiveFromDate = '2026-12-01',
+@ChangeReason = N'Moved to Management', @UserCode = N'&lt;logged-in user&gt;';</pre>
+                    <p class="small text-muted">
+                        It closes the version: EffectiveToDate becomes the day before "Inactive from". It does not set Active = N. To measure the doer again later, submit a new set as usual.
+                    </p>
+
+                    <h5 class="fw-bold fs-6 text-primary mb-2">5.7 History</h5>
+                    <p class="small">A second tab listing every row for the doer, newest first, voided rows included and marked. Read-only.</p>
+                    <pre class="bg-dark text-white p-2 rounded small font-monospace">SELECT * FROM dbo.Z_KPI_Weightage WHERE DoerCode = @DoerCode
+ORDER BY EffectiveFromDate DESC, KPICode;</pre>
+                </section>
+
+                <!-- SECTION 6 -->
+                <section id="sec-6" class="mb-5 pt-2">
+                    <h4 class="fw-bold text-dark border-bottom pb-2 mb-3">6. Procedure contracts</h4>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100 border">
+                                <div class="card-header bg-light py-2 fw-bold small">6.1 SP_KPI_Weightage_Set</div>
+                                <div class="card-body p-2">
+                                    <table class="table table-sm table-bordered small mb-0">
+                                        <thead>
+                                            <tr><th>Parameter</th><th>Type</th><th>Source</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td>@DoerCode</td><td>NVARCHAR(20)</td><td>Doer dropdown</td></tr>
+                                            <tr><td>@EffectiveFromDate</td><td>DATE</td><td>Date picker</td></tr>
+                                            <tr><td>@Weights</td><td>NVARCHAR(MAX)</td><td>JSON array from rows</td></tr>
+                                            <tr><td>@ChangeReason</td><td>NVARCHAR(250)</td><td>Reason box</td></tr>
+                                            <tr><td>@UserCode</td><td>NVARCHAR(50)</td><td>Application session</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border">
+                                <div class="card-header bg-light py-2 fw-bold small">6.2 SP_KPI_Weightage_Inactive</div>
+                                <div class="card-body p-2">
+                                    <table class="table table-sm table-bordered small mb-0">
+                                        <thead>
+                                            <tr><th>Parameter</th><th>Type</th><th>Source</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td>@DoerCode</td><td>NVARCHAR(20)</td><td>Doer dropdown</td></tr>
+                                            <tr><td>@InactiveFromDate</td><td>DATE</td><td>Date picker</td></tr>
+                                            <tr><td>@ChangeReason</td><td>NVARCHAR(250)</td><td>Reason box</td></tr>
+                                            <tr><td>@UserCode</td><td>NVARCHAR(50)</td><td>Application session</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="fw-bold fs-6 text-primary mb-2">6.3 Errors</h5>
+                    <p class="small text-muted">Every message begins with the procedure name. Show it to the user unchanged.</p>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm small align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Number</th>
+                                    <th>Procedure</th>
+                                    <th>Meaning</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>53001–53004</td><td>Set</td><td>A required value is missing: doer, date, reason or user</td></tr>
+                                <tr><td>53005</td><td>Set</td><td>Doer not found, not active, already left, or in Management</td></tr>
+                                <tr><td>53006–53008</td><td>Set</td><td>Effective From before today, before StartDate, or after TermDate</td></tr>
+                                <tr><td>53009–53011</td><td>Set</td><td>Weights not valid JSON, empty, or a row without KPI or weight</td></tr>
+                                <tr><td>53012</td><td>Set</td><td>A KPI appears twice</td></tr>
+                                <tr><td>53013</td><td>Set</td><td>Unknown or inactive KPI</td></tr>
+                                <tr><td>53014–53015</td><td>Set</td><td>A weight is 0, above 1, or has more than two decimals</td></tr>
+                                <tr><td>53016</td><td>Set</td><td>Weights do not add up to exactly 1.00</td></tr>
+                                <tr><td>53031–53035</td><td>Inactive</td><td>A required value is missing, or the date is before today</td></tr>
+                                <tr><td>53036</td><td>Inactive</td><td>No weightage in effect from that date</td></tr>
+                                <tr><td>53037</td><td>Inactive</td><td>Doer still on FMS_Config</td></tr>
+                                <tr><td>53041</td><td>sp_Add_FMS_Config</td><td>A Doer, Backup Doer or Temp Doer has no weightage in effect today</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- SECTION 7 -->
+                <section id="sec-7" class="mb-5 pt-2">
+                    <h4 class="fw-bold text-dark border-bottom pb-2 mb-3">7. FMS_Config and the doer reallocation app</h4>
+                    <p class="small">
+                        A task planned for a doer without a weightage is scored in the task queue but never reaches their KPI score. To stop that at the source, only measured doers can be put on a stage.
+                    </p>
+
+                    <h5 class="fw-bold fs-6 text-primary mb-2">7.1 Doer dropdowns</h5>
+                    <p class="small">The Doer, Backup Doer and Temp Doer dropdowns &mdash; on the FMS_Config screen and on the doer reallocation app &mdash; list only employees with a weightage in effect today:</p>
+                    <pre class="bg-dark text-white p-2 rounded small font-monospace">SELECT DISTINCT e.EmployeeCode, e.EmployeeName
+FROM dbo.VM_EmployeeMaster e
+WHERE EXISTS (SELECT 1 FROM dbo.Z_KPI_Weightage wt
+WHERE wt.DoerCode = e.EmployeeCode AND wt.Active = 'Y'
+AND wt.EffectiveFromDate &lt;= CAST(GETDATE() AS DATE)
+AND (wt.EffectiveToDate IS NULL
+OR wt.EffectiveToDate &gt;= CAST(GETDATE() AS DATE)));</pre>
+
+                    <h5 class="fw-bold fs-6 text-primary mb-2">7.2 The database guard</h5>
+                    <ul class="small">
+                        <li><code>sp_Add_FMS_Config</code> now refuses an active row whose Doer, Backup Doer or Temp Doer has no weightage in effect today (error 53041). Show the message.</li>
+                        <li>Any other code that writes Doer_EC, BackupDoer_EC or TempDoer_EC &mdash; editing an existing FMS_Config row, or the doer reallocation app &mdash; must apply the same rule. Tell us which procedures do this, so the same guard can be added to them.</li>
+                    </ul>
+
+                    <div class="card bg-warning-subtle border-warning-subtle p-3 small mb-3">
+                        <strong class="text-dark">ORDER OF ONBOARDING A NEW DOER:</strong>
+                        <ol class="mb-0 ps-3 mt-1">
+                            <li>HR sets the weightage on the weightage screen, effective today.</li>
+                            <li>Only then is the doer added on FMS_Config.</li>
+                        </ol>
+                        <div class="mt-2 text-muted">Taking a doer off: remove them from FMS_Config first, then Mark Inactive.</div>
+                    </div>
+                </section>
+
+                <!-- SECTION 8 -->
+                <section id="sec-8" class="mb-5 pt-2">
+                    <h4 class="fw-bold text-dark border-bottom pb-2 mb-3">8. What the user will see in scoring</h4>
+                    <div class="table-responsive mb-2">
+                        <table class="table table-bordered table-sm small align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Event</th>
+                                    <th>Effect on scores</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>A new set from date D</td>
+                                    <td>Days from D use the new weights. Days before D are never recalculated with them.</td>
+                                </tr>
+                                <tr>
+                                    <td>A KPI left out of the new set</td>
+                                    <td>From D, the doer gets no rows for that KPI. Earlier days keep theirs.</td>
+                                </tr>
+                                <tr>
+                                    <td>Mark Inactive from D</td>
+                                    <td>From D, the doer gets no score rows and drops out of the weekly review.</td>
+                                </tr>
+                                <tr>
+                                    <td>Version voided before it started</td>
+                                    <td>No effect: it never applied.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="small text-muted">The nightly KPI run (02:00) applies these. A change made today shows in scores from tomorrow morning.</p>
+                </section>
+
+                <!-- SECTION 9 -->
+                <section id="sec-9" class="mb-5 pt-2">
+                    <h4 class="fw-bold text-dark border-bottom pb-2 mb-3">9. Test checklist</h4>
+                    <p class="small text-muted">Run in Test_OperationsDB. After each case, check the grid and run the SQL in Section 5.7 for the doer.</p>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm small align-middle">
+                            <thead class="table-light">
+                                <tr style="width: 5%;">
+                                    <th>#</th>
+                                    <th style="width: 35%;">Case</th>
+                                    <th>Expected</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>T1</td><td>Doer list</td><td>No one with a TermDate before today; no one from Management; each doer once</td></tr>
+                                <tr><td>T2</td><td>Doer with a current set</td><td>Rows shown read-only; nothing editable</td></tr>
+                                <tr><td>T3</td><td>Submit KPI01 0.70, KPI02 0.30 from tomorrow</td><td>Old rows end today, stay Active = Y; two new rows from tomorrow</td></tr>
+                                <tr><td>T4</td><td>Weights 0.70 + 0.20</td><td>Submit disabled; total shown red. Forced through: error 53016, nothing written</td></tr>
+                                <tr><td>T5</td><td>Same KPI twice</td><td>Second row cannot pick it; forced through: 53012</td></tr>
+                                <tr><td>T6</td><td>Weight 0, or 1.25, or 0.333</td><td>Blocked on screen; forced through: 53014 or 53015</td></tr>
+                                <tr><td>T7</td><td>Effective From yesterday</td><td>Not selectable; forced through: 53006</td></tr>
+                                <tr><td>T8</td><td>KPI01 1.00 only</td><td>Accepted; one new row</td></tr>
+                                <tr><td>T9</td><td>Future set from +10 days, then a new set from +5 days</td><td>The +10 set is voided (Active = N); the +5 set is current from +5</td></tr>
+                                <tr><td>T10</td><td>Blank reason</td><td>Blocked on screen; forced through: 53003</td></tr>
+                                <tr><td>T11</td><td>Mark Inactive for a doer on FMS_Config</td><td>Button disabled; forced through: 53037</td></tr>
+                                <tr><td>T12</td><td>Mark Inactive for a doer not on FMS_Config</td><td>Current rows end the day before; no rows Active = N unless a future set existed</td></tr>
+                                <tr><td>T13</td><td>FMS_Config: pick a doer with no weightage</td><td>Not in the dropdown; forced through sp_Add_FMS_Config: 53041</td></tr>
+                                <tr><td>T14</td><td>Two users submit for the same doer at once</td><td>Both succeed one after the other; the second submission is the current set</td></tr>
+                                <tr><td>T15</td><td>Any attempt to edit or delete a row</td><td>No such control exists on the screen</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- SECTION 10 -->
+                <section id="sec-10" class="mb-4 pt-2">
+                    <h4 class="fw-bold text-dark border-bottom pb-2 mb-3">10. What to deliver</h4>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered table-sm small align-middle">
+                            <thead class="table-light">
+                                <tr style="width: 5%;">
+                                    <th>#</th>
+                                    <th>Deliverable</th>
+                                    <th>Section</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>1</td><td>The weightage screen: doer selection, current set, new set entry, Submit</td><td>5.1–5.5</td></tr>
+                                <tr><td>2</td><td>Mark Inactive</td><td>5.6</td></tr>
+                                <tr><td>3</td><td>History tab</td><td>5.7</td></tr>
+                                <tr><td>4</td><td>Role-based access to the screen</td><td>WR16</td></tr>
+                                <tr><td>5</td><td>Doer dropdowns on FMS_Config and the doer reallocation app</td><td>7.1</td></tr>
+                                <tr><td>6</td><td>The list of other procedures that write the doer columns of FMS_Config</td><td>7.2</td></tr>
+                                <tr><td>7</td><td>Test checklist, every case passed</td><td>9</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-secondary py-2 px-3 small fst-italic mb-0">
+                        Any rule here that seems to conflict with how the screen should behave is to be raised, not resolved by choosing.
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
