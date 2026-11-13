@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}KPI Weightage Management - HoseXperts{% endblock %}</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Custom styling -->
+    <link href="/static/css/custom.css" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-light">
+    <!-- Enterprise Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm py-2">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="/">
+                <span class="badge bg-primary px-2 py-1"><i class="bi bi-speedometer2"></i> FMS</span>
+                <span>KPI Weightage</span>
+                <span class="badge bg-secondary text-uppercase ms-1" style="font-size: 0.7rem;">v1.0</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/"><i class="bi bi-sliders2 me-1"></i> Weightage Screen</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#fms-inspector" onclick="switchMainTab('fms-tab')"><i class="bi bi-people-fill me-1"></i> Measured Doers (FMS_Config)</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/docs" target="_blank"><i class="bi bi-file-code me-1"></i> API Docs</a>
+                    </li>
+                </ul>
+
+                <div class="d-flex align-items-center gap-3">
+                    <!-- Environment / Database Selector Badge -->
+                    <div class="d-flex align-items-center bg-dark-subtle border border-secondary px-2 py-1 rounded text-white" style="font-size: 0.82rem;">
+                        <i class="bi bi-database me-1 text-info"></i>
+                        <span class="text-white-50 me-1">DB:</span>
+                        <select id="headerDatabaseSelect" class="form-select form-select-sm bg-dark text-white border-0 py-0 px-2" style="font-size: 0.82rem; width: auto;" onchange="onDatabaseSwitch(this.value)">
+                            <option value="OperationsDB" {% if database == 'OperationsDB' %}selected{% endif %}>OperationsDB (Prod)</option>
+                            <option value="Test_OperationsDB" {% if database == 'Test_OperationsDB' %}selected{% endif %}>Test_OperationsDB (Test)</option>
+                        </select>
+                    </div>
+
+                    <!-- Role Badge / Session Indicator (WR16) -->
+                    <div class="d-flex align-items-center bg-secondary bg-opacity-25 px-2 py-1 rounded border border-secondary" style="font-size: 0.82rem;">
+                        <i class="bi bi-shield-check me-1 text-warning"></i>
+                        <span class="text-white-50 me-1">Role:</span>
+                        <span class="fw-semibold text-white me-2">{% if user.role_id == 1 %}Super Admin (1){% elif user.role_id == 2 %}Approver (2){% else %}Guest ({{ user.role_id }}){% endif %}</span>
+                        <span class="badge {% if user.is_approver %}bg-success{% else %}bg-danger{% endif %}">
+                            {% if user.is_approver %}Authorized Approver{% else %}Read-Only (WR16 Blocked){% endif %}
+                        </span>
+                    </div>
+
+                    <div class="text-white-50" style="font-size: 0.8rem;">
+                        <i class="bi bi-person-circle text-light me-1"></i> {{ user.user_name }} ({{ user.user_code }})
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container-fluid px-4 py-3">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer mt-auto py-3 bg-white border-top text-center text-muted" style="font-size: 0.82rem;">
+        <div class="container">
+            <span>&copy; 2026 HoseXperts Systems &mdash; SDC_FMS_KPIWeightage_SystemDesign v1.0 &bull; Database Guard &amp; Screen Integration</span>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

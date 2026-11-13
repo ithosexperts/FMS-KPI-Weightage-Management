@@ -1,0 +1,95 @@
+/* Custom HoseXperts Enterprise Styling */
+:root {
+    --primary-blue: #0d6efd;
+    --navy-dark: #1a252f;
+    --border-color: #dee2e6;
+    --success-green: #198754;
+    --danger-red: #dc3545;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #212529;
+}
+
+.transition-all {
+    transition: all 0.2s ease-in-out;
+}
+
+.card {
+    border-radius: 8px;
+}
+
+.card-header {
+    border-top-left-radius: 8px !important;
+    border-top-right-radius: 8px !important;
+}
+
+.table th {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+.table td {
+    font-size: 0.85rem;
+}
+
+.badge {
+    font-weight: 500;
+}
+
+#totalIndicatorBox.valid-total {
+    background-color: #d1e7dd;
+    border-color: #a3cfbb !important;
+    color: #0f5132;
+}
+
+#totalIndicatorBox.invalid-total {
+    background-color: #f8d7da;
+    border-color: #f1aeb5 !important;
+    color: #842029;
+}
+
+.kpi-row-item {
+    background-color: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    transition: border-color 0.15s ease;
+}
+
+.kpi-row-item:hover {
+    border-color: #ced4da;
+}
+
+.status-chip {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: 0.25rem;
+}
+
+.status-chip-active {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.status-chip-waiting {
+    background-color: #cff4fc;
+    color: #055160;
+}
+
+.status-chip-voided {
+    background-color: #f8d7da;
+    color: #842029;
+    text-decoration: line-through;
+}
+
+.status-chip-ended {
+    background-color: #e2e3e5;
+    color: #41464b;
+}

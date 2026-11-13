@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Error - HoseXperts{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8 col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4 text-center">
+                <i class="bi bi-exclamation-octagon text-danger display-4 mb-3"></i>
+                <h5 class="fw-bold mb-2">Operation Error</h5>
+                <p class="text-muted small mb-4">{{ message or 'An unexpected error occurred.' }}</p>
+                <a href="/" class="btn btn-primary btn-sm px-4">
+                    <i class="bi bi-arrow-left me-1"></i> Return to Weightage Screen
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

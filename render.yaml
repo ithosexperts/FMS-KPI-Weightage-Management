@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: kpi-weightage-app
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: APP_NAME
+        value: "FMS KPI Weightage Management"
+      - key: API_BASE_URL
+        value: "https://api.hosexperts.com:85/apiv3.php"
+      - key: API_TEST_URL
+        value: "https://api.hosexperts.com:85/apiv2.php"
+      - key: API_DATABASE
+        value: "OperationsDB"
+      - key: API_AUTH_TOKEN
+        value: "Khushbu*#*#123"

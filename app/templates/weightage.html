@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+
+{% block title %}KPI Weightage Management - HoseXperts{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-pie-chart-fill text-primary me-2"></i>KPI Weightage Management
+            </h4>
+            <p class="text-muted small mb-0">
+                System Design &mdash; Weightage screen, version lifecycle, and FMS_Config measured doer rule
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" onclick="reloadDoersList()" title="Refresh doer list">
+                <i class="bi bi-arrow-clockwise me-1"></i> Refresh Doers
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Rule WR16 Access Banner (Shown if user lacks approval rights) -->
+{% if not user.is_approver %}
+<div class="alert alert-danger d-flex align-items-center mb-4 shadow-sm" role="alert">
+    <i class="bi bi-shield-x fs-3 me-3"></i>
+    <div>
+        <h6 class="alert-heading mb-1 fw-bold">WR16: Access Restricted</h6>
+        <div class="small">
+            Only roles with weightage approval permissions (Roles {{ allowed_roles|join(', ') }}) can open this screen and modify weightage configurations. You are currently logged in with Role <strong>{{ user.role_id }}</strong>.
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- SECTION 5.1: SELECT THE DOER -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary rounded-circle p-2" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;">1</span>
+            <h6 class="fw-bold mb-0">Select Doer (WR1 &amp; WR2)</h6>
+        </div>
+        <span class="text-muted small">
+            Rule WR2: Active = 'Y', TermDate empty or &ge; today, DeptCode &ne; 20 (Management)
+        </span>
+    </div>
+    <div class="card-body">
+        <div class="row align-items-center g-3">
+            <div class="col-md-6 col-lg-5">
+                <label for="doerSelect" class="form-label fw-semibold small text-muted text-uppercase mb-1">
+                    Employee Dropdown (Searchable by Code or Name)
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted"><i class="bi bi-person-search"></i></span>
+                    <select id="doerSelect" class="form-select" onchange="onDoerSelected(this.value)">
+                        <option value="">-- Choose a Doer --</option>
+                    </select>
+                </div>
+                <div class="form-text small" id="doerListSummary">Loading eligible doers...</div>
+            </div>
+
+            <!-- Selected Doer Meta Card -->
+            <div class="col-md-6 col-lg-7" id="doerMetaCardContainer" style="display: none;">
+                <div class="p-3 bg-light rounded border d-flex flex-wrap gap-4 align-items-center">
+                    <div>
+                        <div class="text-muted small text-uppercase" style="font-size: 0.72rem;">Employee Code</div>
+                        <div class="fw-bold fs-6 text-primary" id="metaEmpCode">-</div>
+                    </div>
+                    <div>
+                        <div class="text-muted small text-uppercase" style="font-size: 0.72rem;">Full Name</div>
+                        <div class="fw-bold fs-6 text-dark" id="metaEmpName">-</div>
+                    </div>
+                    <div>
+                        <div class="text-muted small text-uppercase" style="font-size: 0.72rem;">Department</div>
+                        <div class="fw-semibold text-secondary" id="metaDepartment">-</div>
+                    </div>
+                    <div>
+                        <div class="text-muted small text-uppercase" style="font-size: 0.72rem;">Start Date</div>
+                        <div class="small fw-semibold text-dark" id="metaStartDate">-</div>
+                    </div>
+                    <div>
+                        <div class="text-muted small text-uppercase" style="font-size: 0.72rem;">Term Date</div>
+                        <div class="small fw-semibold text-dark" id="metaTermDate">-</div>
+                    </div>
+                    <div id="fmsStatusBadgeContainer">
+                        <!-- Populated dynamically: On FMS_Config or Not -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Operational View Tabs -->
+<div id="mainTabsContainer" style="display: none;">
+    <ul class="nav nav-tabs nav-fill mb-3" id="weightageTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-semibold" id="weightage-tab" data-bs-toggle="tab" data-bs-target="#weightage-pane" type="button" role="tab">
+                <i class="bi bi-sliders me-1"></i> Weightage Management &amp; Entry (5.2 &ndash; 5.6)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-semibold" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-pane" type="button" role="tab" onclick="loadDoerHistory()">
+                <i class="bi bi-clock-history me-1"></i> Version History (5.7)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-semibold" id="fms-tab" data-bs-toggle="tab" data-bs-target="#fms-pane" type="button" role="tab" onclick="loadFmsDoersInspector()">
+                <i class="bi bi-funnel-fill me-1"></i> FMS_Config Measured Doers Filter (7.1)
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="weightageTabsContent">
+        <!-- TAB 1: WEIGHTAGE MAINTENANCE & ENTRY -->
+        <div class="tab-pane fade show active" id="weightage-pane" role="tabpanel">
+            <div class="row g-4">
+                <!-- LEFT COLUMN: SECTION 5.2 SHOW CURRENT WEIGHTAGE (READ-ONLY) -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary rounded-circle p-2" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;">2</span>
+                                <h6 class="fw-bold mb-0">Current Weightage &mdash; Read-Only (5.2)</h6>
+                            </div>
+                            <!-- Mark Inactive Button (Section 5.6) -->
+                            <button id="btnMarkInactive" class="btn btn-outline-danger btn-sm" onclick="openMarkInactiveModal()" title="Closes the doer's weightage version">
+                                <i class="bi bi-person-x me-1"></i> Mark Inactive
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <!-- Banner when doer has no weightage -->
+                            <div id="noWeightageAlert" class="alert alert-warning d-flex align-items-center mb-3" style="display: none;">
+                                <i class="bi bi-exclamation-triangle-fill fs-4 me-2 text-warning"></i>
+                                <div>
+                                    <strong>No weightage set &mdash; this doer is not measured.</strong>
+                                    <div class="small text-muted">Their tasks are completed and timed, but none reaches their KPI score. FMS_Config will refuse this doer until a weightage is set.</div>
+                                </div>
+                            </div>
+
+                            <!-- Current Rows Table -->
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0" id="currentWeightageTable">
+                                    <thead class="table-light">
+                                        <tr class="small text-uppercase text-muted">
+                                            <th>KPI Code</th>
+                                            <th>KPI Name</th>
+                                            <th class="text-end">Weight</th>
+                                            <th>Effective From</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="currentWeightageBody">
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-4">Select a doer to view active weightages</td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot id="currentWeightageFooter" style="display: none;">
+                                        <tr class="table-light fw-bold">
+                                            <td colspan="2">Active Version Total:</td>
+                                            <td class="text-end" id="currentTotalCell">1.00</td>
+                                            <td colspan="2" class="text-muted small">Read-only (WR3, WR4)</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            <!-- Note on rule WR4 -->
+                            <div class="alert alert-info py-2 px-3 mt-3 mb-0 small d-flex align-items-center">
+                                <i class="bi bi-info-circle me-2 fs-5"></i>
+                                <div>
+                                    <strong>Rule WR4:</strong> A posted row is never edited or deleted. Any change is created as a complete new version with its own Effective From date.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: SECTION 5.3 ENTER THE NEW SET -->
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-success rounded-circle p-2" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;">3</span>
+                                <h6 class="fw-bold mb-0">Enter New Weightage Set (5.3)</h6>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="addNewKpiRow()" id="btnAddKpiRow">
+                                <i class="bi bi-plus-circle me-1"></i> Add KPI
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <!-- Dynamic KPI Allocation Rows Container -->
+                            <div id="newKpiRowsContainer" class="mb-3">
+                                <!-- Populated dynamically with KPI Dropdown + Weight Input + Remove Button -->
+                            </div>
+
+                            <!-- Running Total Indicator (Section 5.3 & 5.4) -->
+                            <div class="p-3 rounded mb-3 border transition-all" id="totalIndicatorBox">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="fw-bold">
+                                        <i class="bi bi-calculator me-1"></i> Weights Total:
+                                    </div>
+                                    <div class="fs-5 fw-bold" id="totalDisplay">0.00</div>
+                                </div>
+                                <div class="small mt-1" id="totalHelpText">
+                                    Weights must add up to exactly 1.00.
+                                </div>
+                            </div>
+
+                            <!-- Effective From Date Picker -->
+                            <div class="mb-3">
+                                <label for="effectiveFromInput" class="form-label fw-semibold small text-muted text-uppercase mb-1">
+                                    Effective From Date (Today or Later &bull; WR9)
+                                </label>
+                                <input type="date" id="effectiveFromInput" class="form-control" onchange="runOnScreenChecks()">
+                                <div class="form-text small" id="effectiveFromHelpText">
+                                    Chosen on screen. Must be today or later, not before employee StartDate, and not after TermDate.
+                                </div>
+                            </div>
+
+                            <!-- Change Reason (Section 5.3 & WR14) -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label for="changeReasonInput" class="form-label fw-semibold small text-muted text-uppercase mb-0">
+                                        Change Reason (Mandatory &bull; WR14)
+                                    </label>
+                                    <span class="text-muted small" id="reasonCharCounter">0 / 250</span>
+                                </div>
+                                <textarea id="changeReasonInput" class="form-control" rows="2" maxlength="250" placeholder="e.g. Completion rate weighted higher per management review..." oninput="onReasonInput()"></textarea>
+                            </div>
+
+                            <!-- SECTION 5.4 ON-SCREEN CHECKS FEEDBACK LIST -->
+                            <div class="card bg-light border mb-3">
+                                <div class="card-header bg-transparent py-2 border-bottom">
+                                    <span class="small fw-bold text-uppercase text-muted"><i class="bi bi-check2-circle me-1"></i> Section 5.4 Validation Checks</span>
+                                </div>
+                                <div class="card-body py-2">
+                                    <ul class="list-unstyled mb-0 small" id="validationChecksList">
+                                        <li id="check-at-least-one" class="py-1 text-danger"><i class="bi bi-x-circle-fill me-1"></i> Add at least one KPI.</li>
+                                        <li id="check-no-duplicate" class="py-1 text-success"><i class="bi bi-check-circle-fill me-1"></i> No KPI selected twice.</li>
+                                        <li id="check-weight-range" class="py-1 text-danger"><i class="bi bi-x-circle-fill me-1"></i> Enter a weight between 0.01 and 1.00.</li>
+                                        <li id="check-total-exact" class="py-1 text-danger"><i class="bi bi-x-circle-fill me-1"></i> Weights must add up to exactly 1.00. Current total: 0.00</li>
+                                        <li id="check-effective-date" class="py-1 text-danger"><i class="bi bi-x-circle-fill me-1"></i> Choose a date from today, within the doer's employment.</li>
+                                        <li id="check-reason-entered" class="py-1 text-danger"><i class="bi bi-x-circle-fill me-1"></i> Enter the reason for this change.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Error Message Display from Procedure (Section 6.3) -->
+                            <div id="procedureErrorAlert" class="alert alert-danger py-2 px-3 mb-3 small" style="display: none;">
+                                <div class="fw-bold mb-1"><i class="bi bi-shield-exclamation me-1"></i> Stored Procedure Error:</div>
+                                <div id="procedureErrorMessage" class="font-monospace"></div>
+                            </div>
+
+                            <!-- Submit Button (Section 5.5) -->
+                            <button id="btnSubmitNewSet" class="btn btn-success w-100 py-2 fw-semibold shadow-sm" disabled onclick="submitNewWeightageSet()">
+                                <i class="bi bi-check2-square me-1"></i> Submit New Version (SP_KPI_Weightage_Set)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: HISTORY (SECTION 5.7) -->
+        <div class="tab-pane fade" id="history-pane" role="tabpanel">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0">
+                        <i class="bi bi-clock-history text-secondary me-2"></i>Weightage History &mdash; Read-Only (5.7)
+                    </h6>
+                    <span class="text-muted small">
+                        SELECT * FROM dbo.Z_KPI_Weightage WHERE DoerCode = @DoerCode ORDER BY EffectiveFromDate DESC, KPICode
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="historyTable">
+                            <thead class="table-light">
+                                <tr class="small text-uppercase text-muted">
+                                    <th>ID</th>
+                                    <th>KPI Code</th>
+                                    <th>KPI Name</th>
+                                    <th class="text-end">Weight</th>
+                                    <th>Effective From</th>
+                                    <th>Effective To</th>
+                                    <th>Active</th>
+                                    <th>Status</th>
+                                    <th>Change Reason</th>
+                                    <th>Created By</th>
+                                    <th>Sync / Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr>
+                                    <td colspan="11" class="text-center text-muted py-4">Click to load history...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: FMS_CONFIG MEASURED DOERS INSPECTOR (SECTION 7.1) -->
+        <div class="tab-pane fade" id="fms-pane" role="tabpanel">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="fw-bold mb-1">
+                            <i class="bi bi-funnel-fill text-info me-2"></i>FMS_Config &amp; Doer Reallocation App Dropdowns (7.1)
+                        </h6>
+                        <div class="text-muted small">
+                            Lists only employees who have a weightage in effect today. Unmeasured doers are excluded.
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-info btn-sm" onclick="loadFmsDoersInspector()">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Refresh Measured List
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-lg-5">
+                            <h6 class="fw-bold text-dark small text-uppercase mb-2">Measured Doers Eligible For FMS_Config</h6>
+                            <div class="border rounded p-2 bg-light" style="max-height: 380px; overflow-y: auto;" id="fmsDoersListContainer">
+                                <div class="text-muted small text-center py-3">Loading measured doers...</div>
+                            </div>
+                        </div>
+                        <div class="col-lg-7">
+                            <div class="alert alert-info py-2 px-3 small mb-3">
+                                <strong>Section 7.1 SQL Contract:</strong>
+                                <pre class="mb-0 mt-1 p-2 bg-dark text-white rounded font-monospace" style="font-size: 0.78rem;">SELECT DISTINCT e.EmployeeCode, e.EmployeeName
+FROM dbo.VM_EmployeeMaster e
+WHERE EXISTS (
+    SELECT 1 FROM dbo.Z_KPI_Weightage wt
+    WHERE wt.DoerCode = e.EmployeeCode AND wt.Active = 'Y'
+    AND wt.EffectiveFromDate &lt;= CAST(GETDATE() AS DATE)
+    AND (wt.EffectiveToDate IS NULL OR wt.EffectiveToDate &gt;= CAST(GETDATE() AS DATE))
+);</pre>
+                            </div>
+                            <div class="card border bg-light">
+                                <div class="card-body small">
+                                    <h6 class="fw-bold text-dark mb-2">Section 7.2 Procedures &amp; Guards Checklist:</h6>
+                                    <ul class="mb-2 ps-3">
+                                        <li><strong>sp_Add_FMS_Config:</strong> Guarded with error <strong>53041</strong> ("A Doer, Backup Doer or Temp Doer has no weightage in effect today").</li>
+                                        <li><strong>One_Portal Masters Router:</strong> Updated to validate Doer/Backup/Temp against measured doers on save.</li>
+                                        <li><strong>Doer Reallocation App (APP000073 &amp; APP000008):</strong> Filtered to measured doers.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MARK INACTIVE MODAL (SECTION 5.6) -->
+<div class="modal fade" id="markInactiveModal" tabindex="-1" aria-labelledby="markInactiveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white py-3">
+                <h6 class="modal-title fw-bold" id="markInactiveModalLabel">
+                    <i class="bi bi-person-x-fill me-1"></i> Mark Doer Inactive (SP_KPI_Weightage_Inactive)
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Guard Warning Banner if on FMS_Config -->
+                <div id="inactiveBlockedAlert" class="alert alert-danger mb-3" style="display: none;">
+                    <i class="bi bi-slash-circle-fill me-1"></i>
+                    <strong>Remove this doer from FMS_Config first (Error 53037)</strong>
+                    <div class="small mt-1" id="inactiveBlockedDetails"></div>
+                </div>
+
+                <div id="inactiveFormFields">
+                    <p class="small text-muted mb-3">
+                        For a doer who stays employed but stops being a doer (moved to Management or a role with no FMS tasks). Closes the active version as of the day before the chosen date. Does not set <code>Active = N</code>.
+                    </p>
+                    <div class="mb-3">
+                        <label for="inactiveFromDateInput" class="form-label fw-semibold small text-muted text-uppercase mb-1">
+                            Inactive From Date (Today or Later &bull; 53035)
+                        </label>
+                        <input type="date" id="inactiveFromDateInput" class="form-control" onchange="validateInactiveForm()">
+                    </div>
+                    <div class="mb-3">
+                        <label for="inactiveReasonInput" class="form-label fw-semibold small text-muted text-uppercase mb-1">
+                            Change Reason (Mandatory &bull; 53033)
+                        </label>
+                        <textarea id="inactiveReasonInput" class="form-control" rows="2" maxlength="250" placeholder="e.g. Moved to Management department..." oninput="validateInactiveForm()"></textarea>
+                    </div>
+                    <div id="inactiveProcedureError" class="alert alert-danger py-2 px-3 small" style="display: none;"></div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger btn-sm" id="btnConfirmInactive" disabled onclick="submitMarkInactive()">
+                    <i class="bi bi-check-lg me-1"></i> Confirm Inactive
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/weightage.js"></script>
+{% endblock %}
