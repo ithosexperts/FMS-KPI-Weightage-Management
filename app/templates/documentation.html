@@ -170,11 +170,11 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-bold">Active = Y</td>
-                                    <td>A real version &mdash; current, past or waiting to start.</td>
+                                    <td>A real version &mdash; current, past or waiting to start. <strong>Strictly dependent on the doer having <code>Is Employed = 'Y'</code> in <code>dbo.VM_EmployeeMaster</code>.</strong> A version is scored and considered active only while the doer remains actively employed.</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-bold">Active = N</td>
-                                    <td>Voided: replaced before it ever took effect. Ignored by scoring.</td>
+                                    <td>Voided or inactive &mdash; replaced before it ever took effect, or marked inactive when employment ends (<code>Is Employed = 'N'</code>). Ignored by scoring.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -252,7 +252,7 @@
                                     <td>Active</td>
                                     <td>CHAR(1)</td>
                                     <td>SP</td>
-                                    <td>Y, or N when voided</td>
+                                    <td>Y, or N when voided (strictly dependent on <code>Is Employed = 'Y'</code> in <code>VM_EmployeeMaster</code>)</td>
                                 </tr>
                                 <tr>
                                     <td>ChangeReason</td>
@@ -276,7 +276,7 @@
                         </table>
                     </div>
                     <p class="small text-muted mb-4">
-                        The table enforces: weight between 0 and 1; Active is Y or N; EffectiveToDate not before EffectiveFromDate; one live version per doer, KPI and start date.
+                        The table enforces: weight between 0 and 1; Active is Y or N (dependent on Is Employed = Y); EffectiveToDate not before EffectiveFromDate; one live version per doer, KPI and start date.
                     </p>
 
                     <h5 class="fw-bold fs-6 text-primary mb-2">3.2 Z_KPI_Master</h5>
@@ -384,12 +384,14 @@ AND ISNULL(DeptCode, 0) &lt;&gt; 20</pre>
                     <p class="small text-muted">DISTINCT is needed: the employee master returns one row per role.</p>
 
                     <h5 class="fw-bold fs-6 text-primary mb-2">5.2 Show the current weightage &mdash; read-only</h5>
-                    <p class="small">The version in effect and any version waiting to start, with every column of Section 3.1. Nothing on this grid can be edited.</p>
-                    <pre class="bg-dark text-white p-2 rounded small font-monospace">SELECT * FROM dbo.Z_KPI_Weightage
-WHERE DoerCode = @DoerCode AND Active = 'Y'
-AND (EffectiveToDate IS NULL OR EffectiveToDate >= CAST(GETDATE() AS DATE))
-ORDER BY EffectiveFromDate, KPICode;</pre>
-                    <p class="small text-muted">If the doer has no rows, show <em>"No weightage set &mdash; this doer is not measured"</em>.</p>
+                    <p class="small">The version in effect and any version waiting to start, with every column of Section 3.1. Nothing on this grid can be edited. Active weightage is strictly dependent on the doer having <code>Is Employed = 'Y'</code>.</p>
+                    <pre class="bg-dark text-white p-2 rounded small font-monospace">SELECT wt.* FROM dbo.Z_KPI_Weightage wt
+INNER JOIN dbo.VM_EmployeeMaster e ON e.EmployeeCode = wt.DoerCode
+WHERE wt.DoerCode = @DoerCode AND wt.Active = 'Y'
+AND (e.[Is Employed] = 'Y' OR e.IsEmployed = 'Y')
+AND (wt.EffectiveToDate IS NULL OR wt.EffectiveToDate >= CAST(GETDATE() AS DATE))
+ORDER BY wt.EffectiveFromDate, wt.KPICode;</pre>
+                    <p class="small text-muted">If the doer has no rows or is not actively employed, show <em>"No weightage set &mdash; this doer is not measured"</em>.</p>
 
                     <h5 class="fw-bold fs-6 text-primary mb-2">5.3 Enter the new set</h5>
                     <ul class="small">
@@ -559,11 +561,13 @@ ORDER BY EffectiveFromDate DESC, KPICode;</pre>
                     <p class="small">The Doer, Backup Doer and Temp Doer dropdowns &mdash; on the FMS_Config screen and on the doer reallocation app &mdash; list only employees with a weightage in effect today:</p>
                     <pre class="bg-dark text-white p-2 rounded small font-monospace">SELECT DISTINCT e.EmployeeCode, e.EmployeeName
 FROM dbo.VM_EmployeeMaster e
-WHERE EXISTS (SELECT 1 FROM dbo.Z_KPI_Weightage wt
-WHERE wt.DoerCode = e.EmployeeCode AND wt.Active = 'Y'
-AND wt.EffectiveFromDate &lt;= CAST(GETDATE() AS DATE)
-AND (wt.EffectiveToDate IS NULL
-OR wt.EffectiveToDate &gt;= CAST(GETDATE() AS DATE)));</pre>
+WHERE (e.[Is Employed] = 'Y' OR e.IsEmployed = 'Y')
+AND EXISTS (
+    SELECT 1 FROM dbo.Z_KPI_Weightage wt
+    WHERE wt.DoerCode = e.EmployeeCode AND wt.Active = 'Y'
+    AND wt.EffectiveFromDate &lt;= CAST(GETDATE() AS DATE)
+    AND (wt.EffectiveToDate IS NULL OR wt.EffectiveToDate &gt;= CAST(GETDATE() AS DATE))
+);</pre>
 
                     <h5 class="fw-bold fs-6 text-primary mb-2">7.2 The database guard</h5>
                     <ul class="small">

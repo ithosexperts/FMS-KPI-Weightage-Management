@@ -215,9 +215,42 @@ class KpiService:
         current_total = round(sum(r["Weightage"] for r in current_rows), 2)
         waiting_total = round(sum(r["Weightage"] for r in waiting_rows), 2)
 
+        # Verify employee's employment status in VM_EmployeeMaster (Rule: Active is strictly dependent on Is Employed = 'Y')
+        emp_res = await query_gateway(
+            table="VM_EmployeeMaster",
+            action="select",
+            database=target_db,
+            filters={"EmployeeCode": clean_code},
+            fetch_all=True,
+        )
+        emp_rows = emp_res.get("data", []) or []
+        is_employed = "Y"
+        if emp_rows:
+            emp_row = emp_rows[0]
+            is_employed = str(
+                get_case_insensitive(emp_row, "Is Employed")
+                or get_case_insensitive(emp_row, "IsEmployed")
+                or get_case_insensitive(emp_row, "Is_Employed")
+                or get_case_insensitive(emp_row, "Active", "Y")
+            ).strip().upper()
+
+        if is_employed != "Y":
+            return {
+                "doer_code": clean_code,
+                "is_measured": False,
+                "is_employed": False,
+                "message": "Doer is not actively employed (Is Employed = 'N') — weightage is inactive",
+                "rows": [],
+                "current_rows": [],
+                "waiting_rows": [],
+                "current_total": 0.0,
+                "waiting_total": 0.0,
+            }
+
         return {
             "doer_code": clean_code,
             "is_measured": is_measured,
+            "is_employed": True,
             "message": None if is_measured else "No weightage set — this doer is not measured",
             "rows": valid_rows,
             "current_rows": current_rows,
@@ -376,6 +409,16 @@ class KpiService:
 
         measured_doers: Dict[str, Dict[str, Any]] = {}
         for r in emp_rows:
+            # Active status strictly depends on Is Employed = 'Y'
+            is_employed = str(
+                get_case_insensitive(r, "Is Employed")
+                or get_case_insensitive(r, "IsEmployed")
+                or get_case_insensitive(r, "Is_Employed")
+                or get_case_insensitive(r, "Active", "")
+            ).strip().upper()
+            if is_employed != "Y":
+                continue
+
             code = str(r.get("EmployeeCode") or "").strip()
             name = str(r.get("EmployeeName") or "").strip()
             if code and code.lower() in measured_codes:

@@ -59,7 +59,8 @@ Both the `FMS_Config` screen and the Doer Reallocation App must use this query f
 ```sql
 SELECT DISTINCT e.EmployeeCode, e.EmployeeName
 FROM dbo.VM_EmployeeMaster e
-WHERE EXISTS (
+WHERE (e.[Is Employed] = 'Y' OR e.IsEmployed = 'Y')
+  AND EXISTS (
     SELECT 1 FROM dbo.Z_KPI_Weightage wt
     WHERE wt.DoerCode = e.EmployeeCode AND wt.Active = 'Y'
       AND wt.EffectiveFromDate <= CAST(GETDATE() AS DATE)
