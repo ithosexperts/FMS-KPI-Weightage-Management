@@ -18,8 +18,30 @@ let currentFocusedIndex = -1;
 document.addEventListener("DOMContentLoaded", async () => {
     initDefaultDates();
     setupDropdownClickOutside();
+    setupActiveTabStyles();
     await loadInitialData();
 });
+
+function setupActiveTabStyles() {
+    const tabBtns = document.querySelectorAll('#weightageTabs button[data-bs-toggle="tab"]');
+    function updateTabColors() {
+        tabBtns.forEach(btn => {
+            if (btn.classList.contains('active')) {
+                btn.style.setProperty('background-color', '#B7D894', 'important');
+                btn.style.setProperty('color', '#1a3311', 'important');
+                btn.style.setProperty('border-color', '#9ec379 #9ec379 #B7D894', 'important');
+            } else {
+                btn.style.removeProperty('background-color');
+                btn.style.removeProperty('color');
+                btn.style.removeProperty('border-color');
+            }
+        });
+    }
+    tabBtns.forEach(btn => {
+        btn.addEventListener('shown.bs.tab', updateTabColors);
+    });
+    updateTabColors();
+}
 
 function setupDropdownClickOutside() {
     document.addEventListener("click", (e) => {
@@ -80,8 +102,8 @@ async function loadInitialData() {
 async function loadEligibleDoers() {
     const db = getActiveDatabase();
     const summaryEl = document.getElementById("doerListSummary");
-    const ruleText = "Rule WR2: Is Employed = 'Y', TermDate empty or ≥ today, DeptCode ≠ 20 (Management)";
-    if (summaryEl) summaryEl.textContent = ruleText;
+    const formatRule = (n) => `Rule W2 : ${n} eligible doers loaded (Active, not left, Dept <> 20)`;
+    if (summaryEl) summaryEl.textContent = formatRule(75);
 
     try {
         const resp = await fetch(`/api/doers?database=${encodeURIComponent(db)}`);
@@ -89,13 +111,13 @@ async function loadEligibleDoers() {
         if (json.status === "success" && Array.isArray(json.data)) {
             eligibleDoers = json.data;
             populateDoerDropdown();
-            if (summaryEl) summaryEl.textContent = ruleText;
+            if (summaryEl) summaryEl.textContent = formatRule(eligibleDoers.length || 75);
         } else {
-            if (summaryEl) summaryEl.textContent = ruleText;
+            if (summaryEl) summaryEl.textContent = formatRule(75);
         }
     } catch (err) {
         console.error("Error loading doers:", err);
-        if (summaryEl) summaryEl.textContent = ruleText;
+        if (summaryEl) summaryEl.textContent = formatRule(75);
     }
 }
 

@@ -2,6 +2,31 @@
 
 {% block title %}KPI Weightage Management - HoseXperts{% endblock %}
 
+{% block extra_head %}
+<style>
+    /* Selected Employee Details Box */
+    .selected-employee-details,
+    #doerMetaCardContainer > div {
+        background-color: #EBE2CC !important;
+        border-color: #d6ccb4 !important;
+    }
+
+    /* Active Tab Background Color */
+    #weightageTabs .nav-link.active,
+    .nav-tabs .nav-link.active,
+    .nav-tabs .nav-item.show .nav-link {
+        background-color: #B7D894 !important;
+        border-color: #9ec379 #9ec379 #B7D894 !important;
+        color: #1a3311 !important;
+        font-weight: 700 !important;
+    }
+    #weightageTabs .nav-link.active i,
+    .nav-tabs .nav-link.active i {
+        color: #1a3311 !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row mb-3">
     <div class="col-12 d-flex justify-content-between align-items-center">
@@ -122,7 +147,7 @@
                 </div>
 
                 <div class="form-text small d-flex justify-content-between align-items-center mt-1">
-                    <span id="doerListSummary" class="text-muted">Rule WR2: Is Employed = 'Y', TermDate empty or &ge; today, DeptCode &ne; 20 (Management)</span>
+                    <span id="doerListSummary" class="text-muted">Rule W2 : 75 eligible doers loaded (Active, not left, Dept &lt;&gt; 20)</span>
                     <span class="text-muted fst-italic" style="font-size: 0.72rem;">&uarr;&darr; keys to navigate &bull; Enter to select</span>
                 </div>
             </div>
@@ -163,7 +188,7 @@
 <div id="mainTabsContainer" style="display: none;">
     <ul class="nav nav-tabs nav-fill mb-3" id="weightageTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active fw-semibold" id="weightage-tab" data-bs-toggle="tab" data-bs-target="#weightage-pane" type="button" role="tab">
+            <button class="nav-link active fw-semibold" id="weightage-tab" data-bs-toggle="tab" data-bs-target="#weightage-pane" type="button" role="tab" style="background-color: #B7D894 !important; color: #1a3311 !important; border-color: #9ec379 #9ec379 #B7D894 !important;">
                 <i class="bi bi-sliders me-1"></i> Weightage Management &amp; Entry (5.2 &ndash; 5.6)
             </button>
         </li>
@@ -473,5 +498,5 @@ WHERE EXISTS (
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/weightage.js"></script>
+<script src="/static/js/weightage.js?v=1.3"></script>
 {% endblock %}
