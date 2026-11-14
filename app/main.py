@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.config import settings
+from app.routers.auth import router as auth_router
 from app.routers.weightage import router as weightage_router
 
 logging.basicConfig(
@@ -48,6 +49,7 @@ static_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # Include Routers
+app.include_router(auth_router)
 app.include_router(weightage_router)
 
 

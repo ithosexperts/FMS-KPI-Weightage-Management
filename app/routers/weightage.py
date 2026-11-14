@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.api.client import ApiError
+from app.auth.sso_session import SESSION_COOKIE, decode_session_cookie
 from app.config import settings
 from app.services.kpi_service import KpiService
 
@@ -42,37 +43,78 @@ class InactiveWeightagePayload(BaseModel):
     Database: Optional[str] = Field(None, description="Target database (OperationsDB / Test_OperationsDB)")
 
 
-# ── Role-based Access Guard (WR16) ─────────────────────────────────────────────
+# ── Role-based Access Guard (WR16) & One Portal SSO ───────────────────────────
 
 def get_current_user_and_role(request: Request) -> Dict[str, Any]:
     """
     Extract session identity and role.
-    Checks headers or query params or default user.
+    1. Check verified SSO session cookie (minted upon One Portal SSO launch).
+    2. Check headers or query params (forwarded proxy / test parameters).
+    3. Fallback to default Guest (unauthorized / read-only).
     """
-    role_id_raw = request.headers.get("X-Role-ID") or request.query_params.get("role_id") or str(settings.default_role_id)
-    user_code = request.headers.get("X-User-Code") or request.query_params.get("user_code") or settings.default_user_code
-    user_name = request.headers.get("X-User-Name") or settings.default_user_name
+    # 1. SSO Session Cookie (One Portal)
+    cookie_token = request.cookies.get(SESSION_COOKIE)
+    if cookie_token:
+        sso_data = decode_session_cookie(cookie_token)
+        if sso_data:
+            role_id = int(sso_data.get("role_id", 99))
+            user_code = str(sso_data.get("employee_code") or settings.default_user_code).strip()
+            user_name = str(sso_data.get("full_name") or settings.default_user_name).strip()
+            role_name = str(sso_data.get("role_name") or ("Super Admin" if role_id == 1 else f"Role {role_id}")).strip()
+            return {
+                "role_id": role_id,
+                "role_name": role_name,
+                "user_code": user_code,
+                "user_name": user_name,
+                "is_approver": role_id in settings.allowed_approver_role_ids,
+                "is_sso": True,
+                "target_database": sso_data.get("target_database"),
+            }
 
-    try:
-        role_id = int(role_id_raw)
-    except (ValueError, TypeError):
-        role_id = 99  # Unauthorized guest
+    # 2. Explicit headers or query parameters (for direct API testing / gateway forwarding)
+    role_id_raw = request.headers.get("X-Role-ID") or request.query_params.get("role_id")
+    user_code = request.headers.get("X-User-Code") or request.query_params.get("user_code")
+    user_name = request.headers.get("X-User-Name")
 
+    if role_id_raw or user_code:
+        try:
+            role_id = int(role_id_raw) if role_id_raw else settings.default_role_id
+        except (ValueError, TypeError):
+            role_id = 99
+        return {
+            "role_id": role_id,
+            "role_name": "Approver" if role_id in settings.allowed_approver_role_ids else "Guest",
+            "user_code": user_code or settings.default_user_code,
+            "user_name": user_name or settings.default_user_name,
+            "is_approver": role_id in settings.allowed_approver_role_ids,
+            "is_sso": False,
+            "target_database": None,
+        }
+
+    # 3. Default Guest (Read-Only)
     return {
-        "role_id": role_id,
-        "user_code": user_code,
-        "user_name": user_name,
-        "is_approver": role_id in settings.allowed_approver_role_ids,
+        "role_id": settings.default_role_id,  # 99
+        "role_name": settings.default_user_name,  # Guest
+        "user_code": settings.default_user_code,  # GUEST
+        "user_name": settings.default_user_name,  # Guest
+        "is_approver": settings.default_role_id in settings.allowed_approver_role_ids,  # False
+        "is_sso": False,
+        "target_database": None,
     }
 
 
 def enforce_approver_role(request: Request) -> Dict[str, Any]:
-    """Rule WR16: Only the role that approves weightages can open the screen or submit changes."""
+    """Rule WR16: Only the role that approves weightages can submit changes."""
     user = get_current_user_and_role(request)
     if not user["is_approver"]:
+        if user.get("role_name") == "Guest" or not user.get("is_sso"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access Denied (WR16): You are browsing as Guest (Read-Only). Please launch KPI Weightage Management via One Portal SSO as an authorized approver to submit changes.",
+            )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Access Denied (WR16): Role ID {user['role_id']} is not authorized to approve KPI weightages.",
+            detail=f"Access Denied (WR16): Role ID {user['role_id']} ({user.get('role_name', '')}) is not authorized to approve KPI weightages.",
         )
     return user
 
@@ -85,6 +127,7 @@ async def weightage_screen(request: Request):
     Renders the KPI Weightage Management Screen (Deliverable 1, 2, 3, 4, 5).
     """
     user = get_current_user_and_role(request)
+    active_db = user.get("target_database") or settings.api_database
     template_env = request.app.state.templates
     return template_env.TemplateResponse(
         request=request,
@@ -92,7 +135,7 @@ async def weightage_screen(request: Request):
         context={
             "user": user,
             "app_name": settings.app_name,
-            "database": settings.api_database,
+            "database": active_db,
             "is_production": settings.is_production,
             "allowed_roles": settings.allowed_approver_role_ids,
             "current_page": "weightage",
@@ -108,6 +151,7 @@ async def documentation_screen(request: Request):
     (SDC_FMS_KPIWeightage_SystemDesign v1.0).
     """
     user = get_current_user_and_role(request)
+    active_db = user.get("target_database") or settings.api_database
     template_env = request.app.state.templates
     return template_env.TemplateResponse(
         request=request,
@@ -115,7 +159,7 @@ async def documentation_screen(request: Request):
         context={
             "user": user,
             "app_name": settings.app_name,
-            "database": settings.api_database,
+            "database": active_db,
             "is_production": settings.is_production,
             "allowed_roles": settings.allowed_approver_role_ids,
             "current_page": "documentation",
@@ -128,7 +172,7 @@ async def documentation_screen(request: Request):
 @router.get("/api/doers")
 async def api_get_doers(
     database: Optional[str] = Query(None),
-    user: Dict[str, Any] = Depends(enforce_approver_role),
+    user: Dict[str, Any] = Depends(get_current_user_and_role),
 ):
     """
     Section 5.1 & Rule WR2:
@@ -145,7 +189,7 @@ async def api_get_doers(
 @router.get("/api/kpi-master")
 async def api_get_kpi_master(
     database: Optional[str] = Query(None),
-    user: Dict[str, Any] = Depends(enforce_approver_role),
+    user: Dict[str, Any] = Depends(get_current_user_and_role),
 ):
     """
     Section 3.2:
@@ -163,7 +207,7 @@ async def api_get_kpi_master(
 async def api_get_current_weightage(
     doer_code: str,
     database: Optional[str] = Query(None),
-    user: Dict[str, Any] = Depends(enforce_approver_role),
+    user: Dict[str, Any] = Depends(get_current_user_and_role),
 ):
     """
     Section 5.2 & Rule WR3:
@@ -193,7 +237,7 @@ async def api_get_current_weightage(
 async def api_get_weightage_history(
     doer_code: str,
     database: Optional[str] = Query(None),
-    user: Dict[str, Any] = Depends(enforce_approver_role),
+    user: Dict[str, Any] = Depends(get_current_user_and_role),
 ):
     """
     Section 5.7:

@@ -48,12 +48,12 @@
 
 <!-- Rule WR16 Access Banner (Shown if user lacks approval rights) -->
 {% if not user.is_approver %}
-<div class="alert alert-danger d-flex align-items-center mb-4 shadow-sm" role="alert">
-    <i class="bi bi-shield-x fs-3 me-3"></i>
+<div class="alert alert-info d-flex align-items-center mb-4 shadow-sm" role="alert">
+    <i class="bi bi-info-circle-fill fs-3 me-3 text-primary"></i>
     <div>
-        <h6 class="alert-heading mb-1 fw-bold">WR16: Access Restricted</h6>
+        <h6 class="alert-heading mb-1 fw-bold">Guest Mode &mdash; Read-Only View</h6>
         <div class="small">
-            Only roles with weightage approval permissions (Roles {{ allowed_roles|join(', ') }}) can open this screen and modify weightage configurations. You are currently logged in with Role <strong>{{ user.role_id }}</strong>.
+            You are browsing in <strong>Guest</strong> mode (Read-Only). You can search doers, inspect active weightages, and review version history. To configure or submit new weightages, launch KPI Weightage Management via <strong>One Portal SSO</strong> as an authorized approver.
         </div>
     </div>
 </div>
@@ -346,9 +346,15 @@
                             </div>
 
                             <!-- Submit Button (Section 5.5) -->
+                            {% if not user.is_approver %}
+                            <button id="btnSubmitNewSet" class="btn btn-secondary w-100 py-2 fw-semibold shadow-sm" disabled title="Approver access required via One Portal SSO">
+                                <i class="bi bi-lock-fill me-1"></i> Submit New Version (Approver Login Required via One Portal SSO)
+                            </button>
+                            {% else %}
                             <button id="btnSubmitNewSet" class="btn btn-success w-100 py-2 fw-semibold shadow-sm" disabled onclick="submitNewWeightageSet()">
                                 <i class="bi bi-check2-square me-1"></i> Submit New Version (SP_KPI_Weightage_Set)
                             </button>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -470,5 +476,8 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/weightage.js?v=1.3"></script>
+<script>
+    window.CURRENT_USER = {{ user|tojson }};
+</script>
+<script src="/static/js/weightage.js?v=1.4"></script>
 {% endblock %}

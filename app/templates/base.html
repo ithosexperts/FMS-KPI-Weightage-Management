@@ -49,18 +49,23 @@
                         </select>
                     </div>
 
-                    <!-- Role Badge / Session Indicator (WR16) -->
+                    <!-- Role Badge / Session Indicator (WR16 & One Portal SSO) -->
                     <div class="d-flex align-items-center bg-secondary bg-opacity-25 px-2 py-1 rounded border border-secondary" style="font-size: 0.82rem;">
                         <i class="bi bi-shield-check me-1 text-warning"></i>
                         <span class="text-white-50 me-1">Role:</span>
-                        <span class="fw-semibold text-white me-2">{% if user.role_id == 1 %}Super Admin (1){% elif user.role_id == 2 %}Approver (2){% else %}Guest ({{ user.role_id }}){% endif %}</span>
-                        <span class="badge {% if user.is_approver %}bg-success{% else %}bg-danger{% endif %}">
-                            {% if user.is_approver %}Authorized Approver{% else %}Read-Only (WR16 Blocked){% endif %}
+                        <span class="fw-semibold text-white me-2">{% if user.role_name %}{{ user.role_name }}{% if user.role_id != 99 %} ({{ user.role_id }}){% endif %}{% elif user.role_id == 1 %}Super Admin (1){% elif user.role_id in [2, 3] %}Approver ({{ user.role_id }}){% else %}Guest{% endif %}</span>
+                        <span class="badge {% if user.is_approver %}bg-success{% else %}bg-secondary{% endif %}">
+                            {% if user.is_approver %}Authorized Approver{% else %}Guest (Read-Only){% endif %}
                         </span>
                     </div>
 
-                    <div class="text-white-50" style="font-size: 0.8rem;">
-                        <i class="bi bi-person-circle text-light me-1"></i> {{ user.user_name }} ({{ user.user_code }})
+                    <div class="text-white-50 d-flex align-items-center gap-2" style="font-size: 0.8rem;">
+                        <span><i class="bi bi-person-circle text-light me-1"></i> {{ user.user_name }} ({{ user.user_code }})</span>
+                        {% if user.is_sso %}
+                        <a href="/logout" class="btn btn-outline-danger btn-sm py-0 px-2 text-white border-danger-subtle" style="font-size: 0.75rem;" title="Sign out of SSO session and revert to Guest">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

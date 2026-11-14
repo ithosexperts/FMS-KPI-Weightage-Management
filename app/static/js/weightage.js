@@ -460,7 +460,12 @@ async function loadCurrentWeightage(empCode) {
         // Configure Mark Inactive button (Section 5.6)
         const btnMarkInact = document.getElementById("btnMarkInactive");
         if (btnMarkInact) {
-            if (isDoerOnFmsConfig) {
+            const isApprover = window.CURRENT_USER ? !!window.CURRENT_USER.is_approver : true;
+            if (!isApprover) {
+                btnMarkInact.disabled = true;
+                btnMarkInact.title = "Approver access required via One Portal SSO";
+                btnMarkInact.classList.add("opacity-50");
+            } else if (isDoerOnFmsConfig) {
                 btnMarkInact.disabled = true;
                 btnMarkInact.title = "Remove this doer from FMS_Config first (Rule WR15)";
                 btnMarkInact.classList.add("opacity-50");
@@ -749,11 +754,12 @@ function runOnScreenChecks() {
     updateCheckItem("check-effective-date", checks.effectiveDate, "Effective From is today or later within employment.", "Choose a date from today, within the doer's employment.");
     updateCheckItem("check-reason-entered", checks.reasonEntered, "Reason entered.", "Enter the reason for this change.");
 
-    // Submit button state: enabled ONLY when every check in Section 5.4 passes
+    // Submit button state: enabled ONLY when every check in Section 5.4 passes AND user is authorized approver
     const allPassed = Object.values(checks).every(Boolean);
+    const isApprover = window.CURRENT_USER ? !!window.CURRENT_USER.is_approver : true;
     const btnSubmit = document.getElementById("btnSubmitNewSet");
     if (btnSubmit) {
-        btnSubmit.disabled = !allPassed;
+        btnSubmit.disabled = !allPassed || !isApprover;
     }
 
     return allPassed;
@@ -828,6 +834,11 @@ async function submitNewWeightageSet() {
 
 function openMarkInactiveModal() {
     if (!selectedDoer) return;
+    const isApprover = window.CURRENT_USER ? !!window.CURRENT_USER.is_approver : true;
+    if (!isApprover) {
+        alert("Approver access required via One Portal SSO to mark a doer inactive.");
+        return;
+    }
 
     const blockedAlert = document.getElementById("inactiveBlockedAlert");
     const blockedDetails = document.getElementById("inactiveBlockedDetails");

@@ -29,13 +29,19 @@ class Settings(BaseSettings):
     db_name: str = "OperationsDB"
 
     # Role-based access control (WR16)
-    # 1: Super Admin, 2: Management / HR Approver
-    allowed_approver_role_ids: List[int] = [1, 2]
+    # 1: Super Admin, 2: Management / HR Approver, 3: Operations Manager / Approver
+    allowed_approver_role_ids: List[int] = [1, 2, 3]
 
-    # Application session user defaults
-    default_user_code: str = "0210"
-    default_user_name: str = "Himanshu Sehgal"
-    default_role_id: int = 1
+    # Application session user defaults (Default is Guest when not launched via SSO)
+    default_user_code: str = "GUEST"
+    default_user_name: str = "Guest"
+    default_role_id: int = 99
+
+    # One Portal Single Sign-On (SSO) configuration
+    kpi_sso_secret: str = "HoseXperts_OnePortal_SSO_Secret_2026_Key_Secure"
+    sso_session_minutes: int = 480
+    sso_cookie_name: str = "kpi_sso_session"
+    sso_cookie_samesite: str = "none"
 
     @property
     def is_production(self) -> bool:
