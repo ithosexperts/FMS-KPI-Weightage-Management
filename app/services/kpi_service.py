@@ -60,7 +60,7 @@ class KpiService:
         Section 5.1 & Rule WR2:
         SELECT DISTINCT EmployeeCode, EmployeeName
         FROM dbo.VM_EmployeeMaster
-        WHERE Active = 'Y'
+        WHERE [Is Employed] = 'Y'
         AND (TermDate IS NULL OR TermDate >= CAST(GETDATE() AS DATE))
         AND ISNULL(DeptCode, 0) <> 20
         """
@@ -77,8 +77,14 @@ class KpiService:
         eligible_map: Dict[str, Dict[str, Any]] = {}
 
         for row in rows:
-            active = str(get_case_insensitive(row, "Active", "")).strip().upper()
-            if active != "Y":
+            # Rule WR2: Check Is Employed = 'Y' (supports 'Is Employed', 'IsEmployed', 'Is_Employed', and fallback 'Active')
+            is_employed = str(
+                get_case_insensitive(row, "Is Employed")
+                or get_case_insensitive(row, "IsEmployed")
+                or get_case_insensitive(row, "Is_Employed")
+                or get_case_insensitive(row, "Active", "")
+            ).strip().upper()
+            if is_employed != "Y":
                 continue
 
             # TermDate check: TermDate IS NULL OR TermDate >= today
@@ -443,10 +449,15 @@ class KpiService:
         emp = emp_rows[0]
         doer_name = str(get_case_insensitive(emp, "EmployeeName", clean_doer)).strip()
 
-        # 53005: Doer active, already left, or in Management
-        emp_active = str(get_case_insensitive(emp, "Active", "")).strip().upper()
-        if emp_active != "Y":
-            raise ApiError(f"SP_KPI_Weightage_Set: 53005 - Doer '{clean_doer}' is not active.")
+        # 53005: Doer is employed, not left, or in Management
+        emp_is_employed = str(
+            get_case_insensitive(emp, "Is Employed")
+            or get_case_insensitive(emp, "IsEmployed")
+            or get_case_insensitive(emp, "Is_Employed")
+            or get_case_insensitive(emp, "Active", "")
+        ).strip().upper()
+        if emp_is_employed != "Y":
+            raise ApiError(f"SP_KPI_Weightage_Set: 53005 - Doer '{clean_doer}' is not employed.")
 
         term_date = parse_date(get_case_insensitive(emp, "TermDate"))
         if term_date and term_date < today:

@@ -94,6 +94,32 @@ body {
     color: #41464b;
 }
 
+/* ── Selected Employee Details Card ───────────────────────────────────── */
+.selected-employee-details,
+#doerMetaCardContainer > div {
+    background-color: #EBE2CC !important;
+    border-color: #d6ccb4 !important;
+}
+
+/* ── Active Tab Styling Down Below ────────────────────────────────────── */
+#weightageTabs .nav-link.active,
+.nav-tabs .nav-link.active {
+    background-color: #B7D894 !important;
+    border-color: #9ec379 #9ec379 #B7D894 !important;
+    color: #1a3311 !important;
+    font-weight: 700 !important;
+}
+
+#weightageTabs .nav-link {
+    color: #495057;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+#weightageTabs .nav-link:hover:not(.active) {
+    background-color: #f1f8eb;
+    border-color: #d8e8c8;
+}
+
 /* ── Searchable Doer Dropdown Combobox ────────────────────────────────── */
 #doerComboboxWrapper {
     position: relative;

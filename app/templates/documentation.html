@@ -307,7 +307,7 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-bold">WR2</td>
-                                    <td>The doer list holds employees who are Active = Y, whose TermDate is empty or today or later, and who are not in Management (department 20).</td>
+                                    <td>The doer list holds employees who are Is Employed = Y, whose TermDate is empty or today or later, and who are not in Management (department 20).</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-bold">WR3</td>
@@ -378,7 +378,7 @@
                     <p class="small">A single dropdown, searchable by code and name. Its list:</p>
                     <pre class="bg-dark text-white p-2 rounded small font-monospace">SELECT DISTINCT EmployeeCode, EmployeeName
 FROM dbo.VM_EmployeeMaster
-WHERE Active = 'Y'
+WHERE [Is Employed] = 'Y'
 AND (TermDate IS NULL OR TermDate >= CAST(GETDATE() AS DATE))
 AND ISNULL(DeptCode, 0) &lt;&gt; 20</pre>
                     <p class="small text-muted">DISTINCT is needed: the employee master returns one row per role.</p>
@@ -532,7 +532,7 @@ ORDER BY EffectiveFromDate DESC, KPICode;</pre>
                             </thead>
                             <tbody>
                                 <tr><td>53001–53004</td><td>Set</td><td>A required value is missing: doer, date, reason or user</td></tr>
-                                <tr><td>53005</td><td>Set</td><td>Doer not found, not active, already left, or in Management</td></tr>
+                                <tr><td>53005</td><td>Set</td><td>Doer not found, not employed, already left, or in Management</td></tr>
                                 <tr><td>53006–53008</td><td>Set</td><td>Effective From before today, before StartDate, or after TermDate</td></tr>
                                 <tr><td>53009–53011</td><td>Set</td><td>Weights not valid JSON, empty, or a row without KPI or weight</td></tr>
                                 <tr><td>53012</td><td>Set</td><td>A KPI appears twice</td></tr>

@@ -80,7 +80,8 @@ async function loadInitialData() {
 async function loadEligibleDoers() {
     const db = getActiveDatabase();
     const summaryEl = document.getElementById("doerListSummary");
-    if (summaryEl) summaryEl.textContent = "Loading eligible doers from VM_EmployeeMaster...";
+    const ruleText = "Rule WR2: Is Employed = 'Y', TermDate empty or ≥ today, DeptCode ≠ 20 (Management)";
+    if (summaryEl) summaryEl.textContent = ruleText;
 
     try {
         const resp = await fetch(`/api/doers?database=${encodeURIComponent(db)}`);
@@ -88,13 +89,13 @@ async function loadEligibleDoers() {
         if (json.status === "success" && Array.isArray(json.data)) {
             eligibleDoers = json.data;
             populateDoerDropdown();
-            if (summaryEl) summaryEl.textContent = `${eligibleDoers.length} eligible doers loaded (Active, not left, Dept <> 20)`;
+            if (summaryEl) summaryEl.textContent = ruleText;
         } else {
-            if (summaryEl) summaryEl.textContent = "Failed to load doers.";
+            if (summaryEl) summaryEl.textContent = ruleText;
         }
     } catch (err) {
         console.error("Error loading doers:", err);
-        if (summaryEl) summaryEl.textContent = "Error connecting to employee master.";
+        if (summaryEl) summaryEl.textContent = ruleText;
     }
 }
 

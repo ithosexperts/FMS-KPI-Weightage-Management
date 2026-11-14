@@ -74,7 +74,7 @@ WHERE EXISTS (
 | Rule ID | Description | Enforced By |
 |---|---|---|
 | **WR1** | Doer is selected first. | UI &amp; API |
-| **WR2** | Doer list: Active = 'Y', TermDate empty or &ge; today, DeptCode &ne; 20 (Management). | UI &amp; Service |
+| **WR2** | Doer list: Is Employed = 'Y', TermDate empty or &ge; today, DeptCode &ne; 20 (Management). | UI &amp; Service |
 | **WR3** | Current version and waiting versions shown read-only. | UI &amp; Table |
 | **WR4** | Posted row is never edited or deleted. Every change is a new version. | Architecture |
 | **WR5** | Complete new set: only allocated KPIs, each once. | UI &amp; SP |
@@ -109,7 +109,7 @@ WHERE EXISTS (
 
 ### Error Codes Reference (Section 6.3)
 - `53001-53004`: Required value missing (doer, date, reason, user)
-- `53005`: Doer not found, not active, already left, or in Management
+- `53005`: Doer not found, not employed, already left, or in Management
 - `53006-53008`: Effective From before today, before StartDate, or after TermDate
 - `53009-53011`: Weights not valid JSON, empty, or row without KPI/weight
 - `53012`: KPI appears twice
