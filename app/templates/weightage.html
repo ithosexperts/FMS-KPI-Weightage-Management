@@ -199,7 +199,7 @@
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link fw-semibold" id="fms-tab" data-bs-toggle="tab" data-bs-target="#fms-pane" type="button" role="tab" onclick="loadFmsDoersInspector()">
-                <i class="bi bi-funnel-fill me-1"></i> FMS_Config Measured Doers Filter (7.1)
+                <i class="bi bi-people-fill me-1"></i> Allocated Doers
             </button>
         </li>
     </ul>
@@ -395,53 +395,25 @@
             </div>
         </div>
 
-        <!-- TAB 3: FMS_CONFIG MEASURED DOERS INSPECTOR (SECTION 7.1) -->
+        <!-- TAB 3: ALLOCATED DOERS (SECTION 7.1) -->
         <div class="tab-pane fade" id="fms-pane" role="tabpanel">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="fw-bold mb-1">
-                            <i class="bi bi-funnel-fill text-info me-2"></i>FMS_Config &amp; Doer Reallocation App Dropdowns (7.1)
+                        <h6 class="fw-bold mb-1 text-dark">
+                            <i class="bi bi-people-fill text-primary me-2"></i>Measured Doers Eligible For FMS_Config
                         </h6>
                         <div class="text-muted small">
-                            Lists only employees who have a weightage in effect today. Unmeasured doers are excluded.
+                            Lists only employees who have an active KPI weightage in effect today. Unmeasured doers are excluded.
                         </div>
                     </div>
-                    <button class="btn btn-outline-info btn-sm" onclick="loadFmsDoersInspector()">
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadFmsDoersInspector()">
                         <i class="bi bi-arrow-clockwise me-1"></i> Refresh Measured List
                     </button>
                 </div>
                 <div class="card-body">
-                    <div class="row g-4">
-                        <div class="col-lg-5">
-                            <h6 class="fw-bold text-dark small text-uppercase mb-2">Measured Doers Eligible For FMS_Config</h6>
-                            <div class="border rounded p-2 bg-light" style="max-height: 380px; overflow-y: auto;" id="fmsDoersListContainer">
-                                <div class="text-muted small text-center py-3">Loading measured doers...</div>
-                            </div>
-                        </div>
-                        <div class="col-lg-7">
-                            <div class="alert alert-info py-2 px-3 small mb-3">
-                                <strong>Section 7.1 SQL Contract:</strong>
-                                <pre class="mb-0 mt-1 p-2 bg-dark text-white rounded font-monospace" style="font-size: 0.78rem;">SELECT DISTINCT e.EmployeeCode, e.EmployeeName
-FROM dbo.VM_EmployeeMaster e
-WHERE EXISTS (
-    SELECT 1 FROM dbo.Z_KPI_Weightage wt
-    WHERE wt.DoerCode = e.EmployeeCode AND wt.Active = 'Y'
-    AND wt.EffectiveFromDate &lt;= CAST(GETDATE() AS DATE)
-    AND (wt.EffectiveToDate IS NULL OR wt.EffectiveToDate &gt;= CAST(GETDATE() AS DATE))
-);</pre>
-                            </div>
-                            <div class="card border bg-light">
-                                <div class="card-body small">
-                                    <h6 class="fw-bold text-dark mb-2">Section 7.2 Procedures &amp; Guards Checklist:</h6>
-                                    <ul class="mb-2 ps-3">
-                                        <li><strong>sp_Add_FMS_Config:</strong> Guarded with error <strong>53041</strong> ("A Doer, Backup Doer or Temp Doer has no weightage in effect today").</li>
-                                        <li><strong>One_Portal Masters Router:</strong> Updated to validate Doer/Backup/Temp against measured doers on save.</li>
-                                        <li><strong>Doer Reallocation App (APP000073 &amp; APP000008):</strong> Filtered to measured doers.</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="border rounded p-3 bg-light" style="max-height: 520px; overflow-y: auto;" id="fmsDoersListContainer">
+                        <div class="text-muted small text-center py-3">Loading measured doers...</div>
                     </div>
                 </div>
             </div>
