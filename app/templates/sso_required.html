@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access via One Portal - KPI Weightage Management</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f1f5f9;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .sso-card {
+            max-width: 480px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+        .sso-card-header {
+            background: #0f172a;
+            color: #ffffff;
+            padding: 24px;
+            text-align: center;
+        }
+        .sso-card-body {
+            padding: 32px 28px;
+            text-align: center;
+        }
+        .icon-circle {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background-color: #eff6ff;
+            color: #2563eb;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 2rem;
+            border: 2px solid #dbeafe;
+        }
+    </style>
+</head>
+<body>
+    <div class="sso-card">
+        <div class="sso-card-header">
+            <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+                <span class="badge bg-primary px-2 py-1"><i class="bi bi-speedometer2"></i> FMS</span>
+                <span class="fw-bold fs-5">KPI Weightage Management</span>
+            </div>
+            <div class="small text-white-50">HoseXperts Systems</div>
+        </div>
+        <div class="sso-card-body">
+            <div class="icon-circle">
+                <i class="bi bi-shield-lock-fill"></i>
+            </div>
+            <h4 class="fw-bold text-dark mb-2">Access Restricted</h4>
+            <p class="text-secondary mb-4" style="font-size: 0.95rem; line-height: 1.5;">
+                This application can only be accessed from <strong>One Portal</strong> via Single Sign-On (SSO). Direct access without portal authentication is disabled.
+            </p>
+            <div class="p-3 bg-light rounded-3 text-start small text-muted mb-4 border">
+                <div class="fw-semibold text-dark mb-1"><i class="bi bi-info-circle text-primary me-1"></i> How to access:</div>
+                <ol class="mb-0 ps-3">
+                    <li>Open <strong>One Portal</strong>.</li>
+                    <li>Sign in with your employee credentials.</li>
+                    <li>Launch <strong>KPI Weightage Management</strong> from the portal apps menu.</li>
+                </ol>
+            </div>
+            <a href="{{ portal_url or 'https://one-portal-blmn.onrender.com' }}" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-2">
+                <i class="bi bi-box-arrow-up-right"></i> Open One Portal
+            </a>
+        </div>
+        <div class="bg-light py-2 text-center text-muted border-top small" style="font-size: 0.78rem;">
+            &copy; 2026 HoseXperts &bull; SDC_FMS_KPIWeightage_SystemDesign v1.0
+        </div>
+    </div>
+</body>
+</html>

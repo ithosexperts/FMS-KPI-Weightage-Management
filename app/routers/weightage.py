@@ -103,15 +103,24 @@ def get_current_user_and_role(request: Request) -> Dict[str, Any]:
     }
 
 
-def enforce_approver_role(request: Request) -> Dict[str, Any]:
-    """Rule WR16: Only the role that approves weightages can submit changes."""
+def enforce_sso_session(request: Request) -> Dict[str, Any]:
+    """
+    Ensures request originates from an authenticated One Portal SSO session.
+    Direct access without portal authentication is denied.
+    """
     user = get_current_user_and_role(request)
+    if not user.get("is_sso"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Access Denied: Please launch KPI Weightage Management from One Portal.",
+        )
+    return user
+
+
+def enforce_approver_role(request: Request) -> Dict[str, Any]:
+    """Rule WR16: Only an authorized approver role can submit or modify weightages."""
+    user = enforce_sso_session(request)
     if not user["is_approver"]:
-        if user.get("role_name") == "Guest" or not user.get("is_sso"):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access Denied (WR16): You are browsing as Guest (Read-Only). Please launch KPI Weightage Management via One Portal SSO as an authorized approver to submit changes.",
-            )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Access Denied (WR16): Role ID {user['role_id']} ({user.get('role_name', '')}) is not authorized to approve KPI weightages.",
@@ -124,9 +133,21 @@ def enforce_approver_role(request: Request) -> Dict[str, Any]:
 @router.get("/", response_class=HTMLResponse)
 async def weightage_screen(request: Request):
     """
-    Renders the KPI Weightage Management Screen (Deliverable 1, 2, 3, 4, 5).
+    Renders the KPI Weightage Management Screen.
+    If not accessed via One Portal SSO, renders the access restricted screen.
     """
     user = get_current_user_and_role(request)
+    if not user.get("is_sso"):
+        template_env = request.app.state.templates
+        return template_env.TemplateResponse(
+            request=request,
+            name="sso_required.html",
+            context={
+                "portal_url": settings.one_portal_url,
+            },
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+
     active_db = user.get("target_database") or settings.api_database
     template_env = request.app.state.templates
     return template_env.TemplateResponse(
@@ -147,10 +168,21 @@ async def weightage_screen(request: Request):
 @router.get("/docs", response_class=HTMLResponse)
 async def documentation_screen(request: Request):
     """
-    Renders the complete 10-page official System Design Documentation
-    (SDC_FMS_KPIWeightage_SystemDesign v1.0).
+    Renders the complete 10-page official System Design Documentation.
+    If not accessed via One Portal SSO, renders the access restricted screen.
     """
     user = get_current_user_and_role(request)
+    if not user.get("is_sso"):
+        template_env = request.app.state.templates
+        return template_env.TemplateResponse(
+            request=request,
+            name="sso_required.html",
+            context={
+                "portal_url": settings.one_portal_url,
+            },
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+
     active_db = user.get("target_database") or settings.api_database
     template_env = request.app.state.templates
     return template_env.TemplateResponse(
@@ -172,7 +204,7 @@ async def documentation_screen(request: Request):
 @router.get("/api/doers")
 async def api_get_doers(
     database: Optional[str] = Query(None),
-    user: Dict[str, Any] = Depends(get_current_user_and_role),
+    user: Dict[str, Any] = Depends(enforce_sso_session),
 ):
     """
     Section 5.1 & Rule WR2:
@@ -189,7 +221,7 @@ async def api_get_doers(
 @router.get("/api/kpi-master")
 async def api_get_kpi_master(
     database: Optional[str] = Query(None),
-    user: Dict[str, Any] = Depends(get_current_user_and_role),
+    user: Dict[str, Any] = Depends(enforce_sso_session),
 ):
     """
     Section 3.2:
@@ -207,7 +239,7 @@ async def api_get_kpi_master(
 async def api_get_current_weightage(
     doer_code: str,
     database: Optional[str] = Query(None),
-    user: Dict[str, Any] = Depends(get_current_user_and_role),
+    user: Dict[str, Any] = Depends(enforce_sso_session),
 ):
     """
     Section 5.2 & Rule WR3:
@@ -237,7 +269,7 @@ async def api_get_current_weightage(
 async def api_get_weightage_history(
     doer_code: str,
     database: Optional[str] = Query(None),
-    user: Dict[str, Any] = Depends(get_current_user_and_role),
+    user: Dict[str, Any] = Depends(enforce_sso_session),
 ):
     """
     Section 5.7:

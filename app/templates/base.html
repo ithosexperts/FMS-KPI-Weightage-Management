@@ -59,13 +59,8 @@
                         </span>
                     </div>
 
-                    <div class="text-white-50 d-flex align-items-center gap-2" style="font-size: 0.8rem;">
-                        <span><i class="bi bi-person-circle text-light me-1"></i> {{ user.user_name }} ({{ user.user_code }})</span>
-                        {% if user.is_sso %}
-                        <a href="/logout" class="btn btn-outline-danger btn-sm py-0 px-2 text-white border-danger-subtle" style="font-size: 0.75rem;" title="Sign out of SSO session and revert to Guest">
-                            <i class="bi bi-box-arrow-right"></i> Logout
-                        </a>
-                        {% endif %}
+                    <div class="text-white-50 d-flex align-items-center" style="font-size: 0.8rem;">
+                        <i class="bi bi-person-circle text-light me-1"></i> {{ user.user_name }} ({{ user.user_code }})
                     </div>
                 </div>
             </div>

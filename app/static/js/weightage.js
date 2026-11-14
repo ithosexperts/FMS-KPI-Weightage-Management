@@ -463,7 +463,7 @@ async function loadCurrentWeightage(empCode) {
             const isApprover = window.CURRENT_USER ? !!window.CURRENT_USER.is_approver : true;
             if (!isApprover) {
                 btnMarkInact.disabled = true;
-                btnMarkInact.title = "Approver access required via One Portal SSO";
+                btnMarkInact.title = "Approver role required to mark a doer inactive";
                 btnMarkInact.classList.add("opacity-50");
             } else if (isDoerOnFmsConfig) {
                 btnMarkInact.disabled = true;
@@ -836,7 +836,7 @@ function openMarkInactiveModal() {
     if (!selectedDoer) return;
     const isApprover = window.CURRENT_USER ? !!window.CURRENT_USER.is_approver : true;
     if (!isApprover) {
-        alert("Approver access required via One Portal SSO to mark a doer inactive.");
+        alert("Approver role required to mark a doer inactive.");
         return;
     }
 

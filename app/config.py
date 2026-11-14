@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     default_role_id: int = 99
 
     # One Portal Single Sign-On (SSO) configuration
+    one_portal_url: str = "https://one-portal-blmn.onrender.com"
     kpi_sso_secret: str = "HoseXperts_OnePortal_SSO_Secret_2026_Key_Secure"
     sso_session_minutes: int = 480
     sso_cookie_name: str = "kpi_sso_session"
